@@ -1,14 +1,14 @@
-using Caramelo
+using Caramel
 using Documenter
 
-DocMeta.setdocmeta!(Caramelo, :DocTestSetup, :(using Caramelo); recursive=true)
+DocMeta.setdocmeta!(Caramel, :DocTestSetup, :(using Caramel); recursive=true)
 
 makedocs(;
-    modules=[Caramelo],
+    modules=[Caramel],
     authors="Antonio Saragga Seabra",
-    sitename="Caramelo.jl",
+    sitename="Caramel.jl",
     format=Documenter.HTML(;
-        canonical="https://ASaragga.github.io/Caramelo.jl",
+        canonical="https://ASaragga.github.io/Caramel.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/ASaragga/Caramelo.jl",
+    repo="github.com/ASaragga/Caramel.jl",
     devbranch="main",
 )
