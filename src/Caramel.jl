@@ -1,6 +1,8 @@
 module Caramel
     # Dependencies:
     using Reexport
+    using Base64
+    using Random
     using Dates
     using HTTP
     using DBInterface, SQLite, DuckDB
@@ -11,28 +13,28 @@ module Caramel
     using Distributions   
     using Statistics
 
-    import Statistics: mean, median, std, cov, cor
-    export mean, median, std, cov, cor 
+# Statistics functions
+    import Statistics: mean, median, var, std, cov, cor
+    export mean, median, var, std, cov, cor 
     
-    import StatsBase: quantile
-    export quantile
+    import StatsBase: mad, quantile, quantilerank, describe
+    export mad, quantile, quantilerank, describe
 
-    # @reexport using Distributions
     import Distributions: Normal, TDist, pdf, cdf
     export Normal, TDist, pdf, cdf
 
-    import DataFrames: DataFrame    # Explicitly import DataFrame
-    export DataFrame                # Re-export DataFrame so users don't need `using DataFrames`
+    
+    import DataFrames: DataFrame    # DataFrames: Consider not exporting it
+    export DataFrame                # Optional—consider removing
 
     import DBInterface: execute, close!
-
-    #@reexport using DBInterface: execute, close!
-    sql = DBInterface.execute
-    db_close = DBInterface.close!
+    const sql = DBInterface.execute   # Using `const` improves performance
+    const db_close = DBInterface.close!
     export sql, db_close
 
-    #Re Exports from Dates:
-    export Date, DateTime, today
+    import CSV: read, write
+    export read, write
+
 
     # From Structs.jl
     export _Exchange_Daily_Hours, Asset, AssetReturn, AssetPrice, show, summary, values, timestamp, scale, id
