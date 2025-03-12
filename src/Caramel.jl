@@ -9,7 +9,11 @@ module Caramel
     using XLSX                 
     using OrderedCollections 
     using Distributions   
+    using Statistics
 
+    import Statistics: mean, median, std, cov, cor
+    export mean, median, std, cov, cor 
+    
     import StatsBase: quantile
     export quantile
 
