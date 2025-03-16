@@ -22,7 +22,7 @@
 
 ## 1.2 - Gestão de Bibliotecas
 
-Biblioteca das disciplinas GRF e ARE: `Caramel.jl`
+Biblioteca das disciplinas ARE e GRF: `Caramel.jl`
 
 ### 1.2.1 - Instalação Local da Biblioteca `Caramel.jl`
 Na nossa aplicação Julia local, instalamos a biblioteca `Caramel.jl` a partir do Repositório no GitHub,
