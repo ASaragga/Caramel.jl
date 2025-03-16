@@ -9,6 +9,7 @@ module Caramel
     using XLSX
     using SQLite, DuckDB
     using OrderedCollections
+    using Plots
 
     export Date, today
 
