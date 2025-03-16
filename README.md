@@ -1,11 +1,11 @@
-# GRF - Gestão de Riscos Financeiros
+# Caramel
 ![](GRF01.jpg?raw=true)
+  
+### $\blacktriangleright$ Valorização, Aquisição e Reorganização de Empresas e Negócios (ARE)
+### $\blacktriangleright$ Gestão de Riscos Financeiros (GRF)
+### $\blacktriangleright$ Mercados e Produtos Financeiros (MPF)
 
-- Medindo o Risco de Perda: VaR e ETL
-- Mercado de Ações
-- Mercado Cambial
-- Risco de Taxa de Juro
-- Risco de Crédito
+
 
 # 1 - Guia de Instalação e Desenvolvimento Julia
 
