@@ -22,21 +22,6 @@ Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
-CSV = "0.10.15"
-DBInterface = "2.6.1"
-DataFrames = "1.7.0"
-Dates = "1.10.8"
-HTTP = "1.10.15"
-JSON3 = "1.14.1"
-LinearAlgebra = "1.10.8"
-OrderedCollections = "1.8.0"
-Random = "1.10.8"
-SQLite = "1.6.1"
-Statistics = "1.10.0"
-StatsBase = "0.34.4"
-Tables = "1.12.0"
-XLSX = "0.10.4"
-julia = "1.6.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
