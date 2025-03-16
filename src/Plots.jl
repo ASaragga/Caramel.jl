@@ -20,7 +20,7 @@ sorted_data = sort(data)
     theoretical_quantiles = quantile.(Normal(μ, σ), (1:n) ./ (n + 1))
 
     # Create Q-Q plot
-    scatter(theoretical_quantiles, sorted_data, 
+    Plots.scatter(theoretical_quantiles, sorted_data, 
             label="Observed", 
             xlabel=xlabel, 
             ylabel=ylabel, 
@@ -28,7 +28,7 @@ sorted_data = sort(data)
             legend=:topleft)
 
     # Add a reference line (y = x)
-    plot!(theoretical_quantiles, theoretical_quantiles, 
+    Plots.plot!(theoretical_quantiles, theoretical_quantiles, 
           label="Reference Line", 
           linecolor=:red, 
           linestyle=:dash)
