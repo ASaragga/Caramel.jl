@@ -1,6 +1,5 @@
 module Caramel
     # Dependencies:
-    using Random
     using Dates
     using HTTP
     using DBInterface, SQLite, DuckDB
