@@ -1,6 +1,5 @@
 const _BASE_URL_ = "https://query2.finance.yahoo.com"
 
-
 function _clean_prices_nothing(x::AbstractVector)
     output = Vector{Float64}(undef, length(x))
     map!(output, x) do val
@@ -239,7 +238,7 @@ function _process_response(response_body, symbol, interval, autoadjust, exchange
     res = JSON3.read(response_body).chart.result[1]
     time_offset = exchange_local_time ? res.meta.gmtoffset : 0
 
-    haskey(res, "timestamp") ? timestamps = res.timestamp : error("No historical data for this timeperiod of $symbo")
+    haskey(res, "timestamp") ? timestamps = res.timestamp : error("No historical data for this timeperiod of $symbol")
     
     idx = length(timestamps) - length(unique(timestamps)) == 1 ? (1:length(timestamps)-1) : eachindex(timestamps)
 
@@ -346,14 +345,7 @@ function get_prices(symbol::String;
 end
 
 # Specialized Convenient Method
-get_prices(symbol::String, startdt::T, enddt::T; kwargs...) where T <: Union{Date,DateTime,AbstractString} = 
-    get_prices(symbol; startdt=startdt, enddt=enddt, kwargs...)
-
-
-
-
-
-
+get_prices(symbol::String, startdt::T, enddt::T; kwargs...) where T <: Union{Date,DateTime,AbstractString} = get_prices(symbol; startdt=startdt, enddt=enddt, kwargs...)
 
 
 """
@@ -504,17 +496,6 @@ function _empty_splits_dict(symbol)
 end
 
 
-
-
-
-
-
-
-
-
-
-
-
 """
     get_dividends(symbol::String; startdt::Union{Date,DateTime,AbstractString}="", enddt::Union{Date,DateTime,AbstractString}="", timeout::Int=10, throw_error::Bool=false, exchange_local_time::Bool=false)
 
@@ -659,9 +640,6 @@ function _empty_dividends_dict(symbol)
         "div" => Float64[]
     )
 end
-
-
-
 
 
 """

@@ -36,7 +36,7 @@ function roll_apply(data::AbstractVector{<:Number}...;fun::Function, window::Int
     return res
 end
 
-function roll_apply(TA::AssetReturn;fun::Function, window::Int,retain_length::Bool=false,fill_with = NaN,always_return::Bool=false)
+function roll_apply(TA;fun::Function, window::Int,retain_length::Bool=false,fill_with = NaN,always_return::Bool=false)
     d = timestamp(TA)
     data = [values(TA[i]) for i in colnames(TA)]
     if always_return && (window>length(data[1]))

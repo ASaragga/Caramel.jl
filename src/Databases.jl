@@ -210,6 +210,28 @@ function db_create(db_path::String, dbtype::String = "duckdb")
             socialScorePeers        FLOAT
             );
         """)
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS stock_prices (
+            symbol      VARCHAR NOT NULL,
+            date        DATE, 
+            open        FLOAT,
+            high        FLOAT,
+            low         FLOAT,
+            close       FLOAT,
+            adjclose    FLOAT,
+            vol         DOUBLE
+            );
+        """)
+
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS stock_returns (
+            symbol      TEXT NOT NULL,
+            date        TEXT NOT NULL, 
+            period      TEXT,
+            type        TEXT,
+            return      REAL
+            );
+        """)
 
     elseif lowercase(dbtype) == "sqlite"
         conn = SQLite.DB(db_path)
@@ -407,6 +429,28 @@ function db_create(db_path::String, dbtype::String = "duckdb")
             );
         """)
 
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS stock_prices (
+            symbol      TEXT NOT NULL,
+            date        TEXT NOT NULL, 
+            open        REAL,
+            high        REAL,
+            low         REAL,
+            close       REAL,
+            adjclose    REAL,
+            vol         REAL
+            );
+        """)
+
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS stock_returns (
+            symbol      TEXT NOT NULL,
+            date        TEXT NOT NULL, 
+            period      TEXT,
+            type        TEXT,
+            return      REAL
+            );
+        """)
     end
     # Return the database connection
     return conn

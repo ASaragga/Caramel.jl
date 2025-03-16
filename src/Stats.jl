@@ -13,6 +13,13 @@ end
 function mean_arith(x::Asset)
     return sum(x.values)/length(x.values)
 end
+function mean_arith(x::LogReturn)
+    return sum(x.values)/length(x.values)
+end
+function mean_arith(x::SimpleReturn)
+    return sum(x.values)/length(x.values)
+end
+
 
 """
     mean_geo(returns::Vector{Float64})
@@ -39,9 +46,9 @@ end
 function mean_geo_log(returns::Asset)
     return exp(mean(log.(1 .+ returns.values))) - 1
 end
-#
 
-# Standard Deviation:
+
+#variance 
 """
     varp(x)
 
@@ -54,20 +61,9 @@ function varp(x::Asset)
     return sum( (x.values .- mean_arith(x.values)).^2 )/length(x.values)
 end
 """
-    stdvp(x)
-
-Calculates the sample variance of a series.
-"""
-function stdvp(x)
-    return sqrt(varp(x))
-end
-function stdvp(x::Asset)
-    return sqrt(varp(x.values))
-end
-"""
     vars(x)
 
-Calculates the population standard deviation of a series.
+Calculates the sample variance of a series.
 """
 function vars(x)
     return sum( (x .- mean_arith(x)).^2 )/(length(x)-1)
@@ -75,6 +71,20 @@ end
 function vars(x::Asset)
     return sum( (x.values .- mean_arith(x.values)).^2 )/(length(x.values)-1)
 end
+
+#standard deviation:
+"""
+    stdvp(x)
+
+Calculates the population standard deviation of a series.
+"""
+function stdvp(x)
+    return sqrt(varp(x))
+end
+function stdvp(x::Asset)
+    return sqrt(varp(x.values))
+end
+
 
 """
     stdvs(x)
@@ -89,6 +99,7 @@ function stdvs(x::Asset)
 end
 #
 
+#=
 # Skewness:
 """
     skew(R, method="simple")
@@ -173,7 +184,7 @@ function kurt(R::Asset, method="simple")
 end
 #
 # End Stats
-
+=#
 
 
 ################################

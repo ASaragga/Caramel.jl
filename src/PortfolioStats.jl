@@ -27,11 +27,11 @@ function drawdown(R::AbstractArray{<:Number})
     return res*-1
 end
 """
-    drawdown(x::AssetReturn)
+    drawdown(x::LogReturn)
 
 Is the drawdown of each return from the last peak.
 """
-function drawdown(AR::AssetReturn)
+function drawdown(AR::LogReturn)
     R = AR.values
     res = Array{Float64}(undef,size(R,1))
     peak = 0 
@@ -52,18 +52,50 @@ function drawdown(AR::AssetReturn)
 end
 
 """
+    drawdown(x::SimpleReturn)
+
+Is the drawdown of each return from the last peak.
+"""
+function drawdown(AR::SimpleReturn)
+    R = AR.values
+    res = Array{Float64}(undef,size(R,1))
+    peak = 0 
+    for i in eachindex(R)
+        val = 1
+        borne = peak +1
+        for j in borne:i
+            val = val*(1 + R[j])
+        end
+        if (val >1)
+            peak = i 
+            res[i] = 0
+        else
+            res[i] = val-1
+        end
+    end
+    return res*-1
+end
+
+
+"""
     maxdrawdown(x::AbstractArray{<:Number})
 
 Calculates the maximum drawdow for a return series.
 """
 maxdrawdown(x::AbstractArray{<:Number}) = maximum(drawdown(x))
 """
-    maxdrawdown(x::AssetReturn)
+    maxdrawdown(x::LogReturn)
 
 Calculates the maximum drawdow for a return series.
 """
-maxdrawdown(x::AssetReturn) = maximum(drawdown(x))
+maxdrawdown(x::LogReturn) = maximum(drawdown(x))
 
+"""
+    maxdrawdown(x::SimpleReturn)
+
+Calculates the maximum drawdow for a return series.
+"""
+maxdrawdown(x::SimpleReturn) = maximum(drawdown(x))
 
 
 """
@@ -91,11 +123,36 @@ function drawdownpeak(R::AbstractArray{<:Number})
     return result.*-1
 end
 """
-    drawdownpeak(x::AssetReturn)
+    drawdownpeak(x::LogReturn)
 
 Calculates the cumulative drawdown since the last peak for each return in the time series.
 """
-function drawdownpeak(AR::AssetReturn)
+function drawdownpeak(AR::LogReturn)
+    R = AR.values
+    drawdownpeak = fill(NaN, size(R,1))
+    peak = 0
+    for i in 1:size(R,1) 
+        val = 1
+        borne = peak + 1
+        for j in (borne:i) 
+            val = val * (1 + R[j]/100)
+        end
+        if (val > 1) 
+            peak = i
+            drawdownpeak[i] = 0
+        else 
+        drawdownpeak[i] = (val - 1) * 100
+        end
+    end                
+    result = drawdownpeak            
+    return result.*-1
+end
+"""
+    drawdownpeak(x::SimpleReturn)
+
+Calculates the cumulative drawdown since the last peak for each return in the time series.
+"""
+function drawdownpeak(AR::SimpleReturn)
     R = AR.values
     drawdownpeak = fill(NaN, size(R,1))
     peak = 0
@@ -123,11 +180,17 @@ Returns the average drowdown for a return series.
 """
 avgdrawdown(x::AbstractArray{<:Number}) = mean_arith(drawdown_table(x)[:,2])
 """
-    avgdrawdown(x::AssetReturn)
+    avgdrawdown(x::LogReturn)
 
 Returns the average drowdown for a return series.
 """
-avgdrawdown(x::AssetReturn) = mean_arith(drawdown_table(x)[:,2])
+avgdrawdown(x::LogReturn) = mean_arith(drawdown_table(x)[:,2])
+"""
+    avgdrawdown(x::SimpleReturn)
+
+Returns the average drowdown for a return series.
+"""
+avgdrawdown(x::SimpleReturn) = mean_arith(drawdown_table(x)[:,2])
 
 """
     drawdown_table(x::AbstractArray{<:Number},dates::AbstractArray{<:TimeType})
@@ -171,13 +234,13 @@ function drawdown_table(x::AbstractArray{<:Number},dates::AbstractArray{<:TimeTy
     return m[sortperm(-m[:,2]),:]
 end
 """
-    drawdown_table(x::AssetReturn)
+    drawdown_table(x::LogReturn)
 
 Returns a matrix of drawdowns sorted by depth. The second column returns the depth of the drawdown.
 The 3rd, 4th, and 5th columns return the start, deepest point, and final date of the drawdown.
 The last column returns the length of the drawdown from the start to the end.
 """
-function drawdown_table(x::AssetReturn) 
+function drawdown_table(x::LogReturn) 
     ds = drawdown(x)::Vector{<:Number}
     dd_num = Int[]
     dd_start=Int[]
@@ -211,6 +274,49 @@ function drawdown_table(x::AssetReturn)
     m = hcat(dd_num,depth,Date.(timestamp(x)[dd_start]),through,Date.(timestamp(x)[dd_end]),Day.(dd_end .+1 .- dd_start))
     return m[sortperm(-m[:,2]),:]
 end
+
+"""
+    drawdown_table(x::SimpleReturn)
+
+Returns a matrix of drawdowns sorted by depth. The second column returns the depth of the drawdown.
+The 3rd, 4th, and 5th columns return the start, deepest point, and final date of the drawdown.
+The last column returns the length of the drawdown from the start to the end.
+"""
+function drawdown_table(x::SimpleReturn) 
+    ds = drawdown(x)::Vector{<:Number}
+    dd_num = Int[]
+    dd_start=Int[]
+    dd_end = Int[]
+    
+    old_val = 0.0
+    count = 0
+    for i in eachindex(ds)
+        if (ds[i]>0) & (isequal(old_val, 0))
+            count+=1
+            push!(dd_num,count)
+            push!(dd_start,i)
+            old_val = ds[i]
+        elseif isequal(ds[i],0) & (old_val>0)
+            push!(dd_end,i) # i-1
+            old_val=ds[i]
+        elseif isequal(length(ds),i) & (ds[i]>0)
+            push!(dd_end,i)
+        elseif (ds[i]>0) & (old_val>0)
+            old_val=ds[i]
+        else
+            old_val=ds[i]
+        end
+    end
+    depth = Float64[]
+    through = Date[]
+    for i in eachindex(dd_start)
+        push!(depth,maximum(ds[dd_start[i]:dd_end[i]]))
+        push!(through, timestamp(x)[isequal.(ds,depth[end])][1])
+    end
+    m = hcat(dd_num,depth,Date.(timestamp(x)[dd_start]),through,Date.(timestamp(x)[dd_end]),Day.(dd_end .+1 .- dd_start))
+    return m[sortperm(-m[:,2]),:]
+end
+
 # End Drawdowns
 
 
@@ -229,13 +335,22 @@ function annualize(R::Number,scale::Float64=252.0)
         return ((1+R)^(scale))-1
 end
 """
-    annualize(R::AssetReturn)
+    annualize(R::SimpleReturn)
 
 Annualizes the return.
 """
-function annualize(R::AssetReturn)
+function annualize(R::SimpleReturn)
         n_values = ((1 .+ R.values).^(R.scale)).-1
-        return AssetReturn(n_values,R.timestamp,R.freq,1.,string(R.id," Annual"),R.exchange)
+        return SimpleReturn(n_values,R.timestamp,R.freq,1.,string(R.id," Annual"),R.exchange)
+end
+"""
+    annualize(R::LogReturn)
+
+Annualizes the return.
+"""
+function annualize(R::LogReturn)
+        n_values = R.values .* R.scale
+        return LogReturn(n_values,R.timestamp,R.freq,1.,string(R.id," Annual"),R.exchange)
 end
 
 """
@@ -244,16 +359,26 @@ end
 Is defined as the annualized return minus the annualized benchmark return.
 """
 function activepremium(Ra::Number, Rb::Number; scalea=1, scaleb=1)
-    annualize(Ra, scalea) - Annualize(Rb, scaleb)
+    annualize(Ra, scalea) - annualize(Rb, scaleb)
 end
 """
-    activepremium(Ra::AssetReturn, Rb::AssetReturn)
+    activepremium(Ra::SimpleReturn, Rb::SimpleReturn)
 
 Is defined as the annualized return minus the annualized benchmark return.
 """
-function activepremium(Ra::AssetReturn, Rb::AssetReturn)
+function activepremium(Ra::SimpleReturn, Rb::SimpleReturn)
     annualize(mean_geo(Ra), Ra.scale) - annualize(mean_geo(Rb), Rb.scale)
 end
+
+"""
+    activepremium(Ra::LogReturn, Rb::LogReturn)
+
+Is defined as the annualized return minus the annualized benchmark return.
+"""
+function activepremium(Ra::LogReturn, Rb::LogReturn)
+    annualize(mean_arith(Ra), Ra.scale) - annualize(mean_arith(Rb), Rb.scale)
+end
+
 
 """
     sharperatio(R::Number,σ::Number,Rf::Number=0.;scale=1)
@@ -273,17 +398,27 @@ Calculates the Sharpe Ratio from a given return series and a risk free rate.
 """
 function sharperatio(R::AbstractArray{<:Number},Rf::Number=0.;scale=1)
     σ = stdvs(R)*sqrt(scale)
-    μ = (mean_geo(R)+1)^(scale).-1
+    μ = mean_arith(R)*(scale)
     return sharperatio(μ,σ,Rf)
 end
 """
-    sharperatio(R::AssetReturn,Rf::Number=0.)
+    sharperatio(R::SimpleReturn,Rf::Number=0.)
 
 Calculates the annualized Sharpe Ratio.
 """
-function sharperatio(R::AssetReturn,Rf::Number=0.)
+function sharperatio(R::SimpleReturn,Rf::Number=0.)
     σ = stdvs(R)*sqrt(R.scale)
     μ = (mean_geo(R)+1)^(R.scale).-1
+    return sharperatio(μ,σ,Rf)
+end
+"""
+    sharperatio(R::LogReturn,Rf::Number=0.)
+
+Calculates the annualized Sharpe Ratio.
+"""
+function sharperatio(R::LogReturn,Rf::Number=0.)
+    σ = stdvs(R)*sqrt(R.scale)
+    μ = mean_arith(R) * (R.scale)
     return sharperatio(μ,σ,Rf)
 end
 
@@ -309,7 +444,7 @@ Calculates the Adjusted Sharpe Ratio from Pezier and White (2006) for a return s
 `method`: specifies the method to be used in the estimation of the Skewness and Kurtosis. Can be one of sample, population, or fisher. Defaults to "population"
 """
 function adjustedsharpe(R::AbstractArray{<:Number},Rf::Number=0.;method::AbstractString="simple",scale=1)
-    μ = (mean_geo(R)+1)^(scale).-1
+    μ = mean_arith(R) * scale
     σ = stdvs(R)*sqrt(scale)
     SR = sharperatio(μ,σ,Rf)
     S = skew(R,method)
@@ -317,21 +452,35 @@ function adjustedsharpe(R::AbstractArray{<:Number},Rf::Number=0.;method::Abstrac
     return SR * (1+(S/6)*SR - ((K-3)/24)*(SR^2))
 end
 """
-    AdjustedSharp(R::AbstractArray{<:Number},Rf::Number=0.;method::AbstractString="population")
+    AdjustedSharpe(R::SimpleReturn,Rf::Number=0.;method::AbstractString="simple")
 
-Calculates the annualized Adjusted Sharpe Ratio from Pezier and White (2006) for a AssetReturn.  
+Calculates the annualized Adjusted Sharpe Ratio from Pezier and White (2006) for a SimpleReturn.  
 
 `method`: specifies the method to be used in the estimation of the Skewness and Kurtosis. Can be one of sample, population, or fisher. Defaults to "population"
 """
-function adjustedsharpe(R::AssetReturn,Rf::Number=0.;method::AbstractString="simple")
-    μ = (mean_geo(R)+1)^(R.scale).-1
+function adjustedsharpe(R::SimpleReturn,Rf::Number=0.;method::AbstractString="simple")
+    μ = mean_arith(R) * R.scale
     σ = stdvs(R)*sqrt(R.scale)
     SR = sharperatio(μ,σ,Rf)
     S = skew(R,method)
     K = kurt(R,method)
     return SR * (1+(S/6)*SR - ((K-3)/24)*(SR^2))
 end 
+"""
+    AdjustedSharpe(R::LogReturn,Rf::Number=0.;method::AbstractString="simple")
 
+Calculates the annualized Adjusted Sharpe Ratio from Pezier and White (2006) for a SimpleReturn.  
+
+`method`: specifies the method to be used in the estimation of the Skewness and Kurtosis. Can be one of sample, population, or fisher. Defaults to "population"
+"""
+function adjustedsharpe(R::LogReturn,Rf::Number=0.;method::AbstractString="simple")
+    μ = mean_arith(R) * R.scale
+    σ = stdvs(R)*sqrt(R.scale)
+    SR = sharperatio(μ,σ,Rf)
+    S = skew(R,method)
+    K = kurt(R,method)
+    return SR * (1+(S/6)*SR - ((K-3)/24)*(SR^2))
+end 
 
 
 
@@ -353,7 +502,16 @@ end
 
 Calculates the Bernardo Ledoit ratio for a AssetReturn.
 """
-function bernardoledoitratio(R::AssetReturn)
+function bernardoledoitratio(R::SimpleReturn)
+    n = length(R.values)
+    return ((1/n) * sum(max.(R.values,0)))/((1/n)*sum(max.(R.values*(-1),0)))
+end
+"""
+    bernardoledoitratio(R::AssetReturn)
+
+Calculates the Bernardo Ledoit ratio for a AssetReturn.
+"""
+function bernardoledoitratio(R::LogReturn)
     n = length(R.values)
     return ((1/n) * sum(max.(R.values,0)))/((1/n)*sum(max.(R.values*(-1),0)))
 end
@@ -420,7 +578,7 @@ function burkeratio(R::AbstractArray{<:Number}; Rf::Float64 = 0., modified::Bool
         push!(dd, (temp - 1) * 100)
         in_drawdown = false
     end
-    Rp = (prod(1 .+ R))^(scale/size(R,1)) - 1
+    Rp = sum(R)*(scale/size(R,1))
     result = (Rp - Rf)/sqrt(sum(dd.^2))
     if (modified) 
         result = result * sqrt(n)
@@ -428,7 +586,7 @@ function burkeratio(R::AbstractArray{<:Number}; Rf::Float64 = 0., modified::Bool
     return(result)
 end
 """
-    burkeratio(AR::AssetReturn; Rf::Float64 = 0., modified::Bool = false)
+    burkeratio(AR::SimpleReturn; Rf::Float64 = 0., modified::Bool = false)
 
 Calculates the Burke Ratio from a return series and a risk free rate.
 
@@ -437,7 +595,7 @@ Calculates the Burke Ratio from a return series and a risk free rate.
    * Rf is the risk free rate.
    * modified adjusted for the number of drawdowns (default is false)
 """
-function burkeratio(AR::AssetReturn; Rf::Float64 = 0., modified::Bool = false)
+function burkeratio(AR::SimpleReturn; Rf::Float64 = 0., modified::Bool = false)
     R = AR.values
     dd = Float64[]
     n = size(R,1)
@@ -481,6 +639,60 @@ function burkeratio(AR::AssetReturn; Rf::Float64 = 0., modified::Bool = false)
     end
     return(result)
 end
+"""
+    burkeratio(AR::LogReturn; Rf::Float64 = 0., modified::Bool = false)
+
+Calculates the Burke Ratio from a return series and a risk free rate.
+
+# Arguments  
+   * Ra is a vector of returns.  
+   * Rf is the risk free rate.
+   * modified adjusted for the number of drawdowns (default is false)
+"""
+function burkeratio(AR::LogReturn; Rf::Float64 = 0., modified::Bool = false)
+    R = AR.values
+    dd = Float64[]
+    n = size(R,1)
+    number_drawdown = 0
+    in_drawdown = false
+    peak = 1 
+    for i in 2:size(R,1) 
+        if (R[i] < 0) 
+            if (!in_drawdown)
+            peak = i - 1
+            number_drawdown = number_drawdown + 1
+            in_drawdown = true
+            end
+        else 
+            if (in_drawdown) 
+            temp = 1
+            boundary1 = peak + 1
+            boundary2 = i - 1
+            for j in (boundary1:boundary2) 
+                temp *= (1 + R[j] * 0.01)
+            end
+            push!(dd, (temp - 1) * 100)
+            in_drawdown = false
+            end
+        end
+    end
+    if (in_drawdown) 
+        temp = 1
+        boundary1 = peak + 1
+        boundary2 = i
+        for j in (boundary1:boundary2) 
+            temp *= (1 + R[j] * 0.01)
+        end
+        push!(dd, (temp - 1) * 100)
+        in_drawdown = false
+    end
+    Rp = sum(R)*(AR.scale/size(R,1)) 
+    result = (Rp - Rf)/sqrt(sum(dd.^2))
+    if (modified) 
+        result = result * sqrt(n)
+    end
+    return(result)
+end
 
 """
     calmarratio(R::AbstractArray{<:Number},scale::Float64=1.)
@@ -492,14 +704,20 @@ Risk return metric. Gives the annualized return divided by the maximum drawdown.
 CalmarRatio = \\frac{r_a}{maxDD}
 ```
 """
-calmarratio(R::AbstractArray{<:Number},scale::Float64=1.) = (annualize(mean_geo(R),scale))/maxdrawdown(R)
+calmarratio(R::AbstractArray{<:Number},scale::Float64=1.) = (annualize(mean_arith(R),scale))/maxdrawdown(R)
 """
-    calmarratio(R::AssetReturn)
+    calmarratio(R::SimpleReturn)
 
 Risk return metric. Gives the annualized return divided by the maximum drawdown.
 """
-calmarratio(R::AssetReturn) = (annualize(mean_geo(R),R.scale))/maxdrawdown(R)
+calmarratio(R::SimpleReturn) = (annualize(mean_geo(R),R.scale))/maxdrawdown(R)
 
+"""
+    calmarratio(R::LogReturn)
+
+Risk return metric. Gives the annualized return divided by the maximum drawdown.
+"""
+calmarratio(R::LogReturn) = (annualize(mean_arith(R),R.scale))/maxdrawdown(R)
 
 
 """
@@ -516,14 +734,24 @@ function downsidedeviation(R::AbstractArray{<:Number},MAR::Number = 0)
     sqrt( sum( (min.(R .- MAR,0).^2)./length(R)))
 end
 """
-    downsidedeviation(R::AssetReturn,MAR::Number = 0)
+    downsidedeviation(R::SimpleReturn,MAR::Number = 0)
 
 Calculates the downside deviation of a return series.
 MAR = Minimum Acceptable Returns
 """
-function downsidedeviation(R::AssetReturn,MAR::Number = 0)
+function downsidedeviation(R::SimpleReturn,MAR::Number = 0)
     sqrt( sum( (min.(R.values .- MAR,0).^2)./length(R.values)))
 end
+"""
+    downsidedeviation(R::LogReturn,MAR::Number = 0)
+
+Calculates the downside deviation of a return series.
+MAR = Minimum Acceptable Returns
+"""
+function downsidedeviation(R::LogReturn,MAR::Number = 0)
+    sqrt( sum( (min.(R.values .- MAR,0).^2)./length(R.values)))
+end
+
 
 """
     DonwsidePotential(R::AbstractArray{<:Number}, MAR::Number=0)
@@ -538,13 +766,24 @@ downsidepotential= \\sum_{t=1}^n{\\frac{min[(r_t-MAR),0]}{n}}
 function downsidepotential(R::AbstractArray{<:Number}, MAR::Number=0)
     return sum( (min.(R .- MAR,0))./length(R))
 end
+
 """
-    DonwsidePotential(R::AbstractArray{<:Number}, MAR::Number=0)
+    DonwsidePotential(R::SimpleReturn, MAR::Number=0)
 
 Cals culates the downside potential of a return series.
 MAR = Minimum Acceptable Returns
 """
-function downsidepotential(R::AssetReturn, MAR::Number=0)
+function downsidepotential(R::SimpleReturn, MAR::Number=0)
+    return sum( (min.(R.values .- MAR,0))./length(R.values))
+end
+
+"""
+    DonwsidePotential(R::LogReturn, MAR::Number=0)
+
+Cals culates the downside potential of a return series.
+MAR = Minimum Acceptable Returns
+"""
+function downsidepotential(R::LogReturn, MAR::Number=0)
     return sum( (min.(R.values .- MAR,0))./length(R.values))
 end
 
@@ -560,11 +799,18 @@ SemiDeviation = \\sqrt{\\sum_{t=1}^n{\\frac{min[(r_t-\\overline{r}),0]^2}{n}}}
 """
 semideviation(R::AbstractArray{<:Number}) = downsidedeviation(R,mean_arith(R))
 """
-    semideviation(R::AssetReturn)
+    semideviation(R::SimpleReturn)
 
-Calculates the semi deviation of a Asset Return.
+Calculates the semi deviation of a Simple Return.
 """
-semideviation(R::AssetReturn) = downsidedeviation(R, mean_arith(R))
+semideviation(R::SimpleReturn) = downsidedeviation(R, mean_arith(R))
+"""
+    semideviation(R::LogReturn)
+
+Calculates the semi deviation of a Log Return.
+"""
+semideviation(R::LogReturn) = downsidedeviation(R, mean_arith(R))
+
 
 """
     semivariance(R::AbstractArray{<:Number})
@@ -577,23 +823,33 @@ SemiVariance = SemiDeviation^2  = \\sum_{t=1}^n{\\frac{min[(r_t-\\overline{r}),0
 """
 semivariance(R::AbstractArray{<:Number}) = downsidedeviation(R, mean_arith(R))^2
 """
-    semivariance(R::AbstractArray{<:Number})
+    semivariance(R::SimpleReturn)
 
-Calculates the semi variance of a AssetReturn.
+Calculates the semi variance of a SimpleReturn.
 """
-semivariance(R::AssetReturn) = downsidedeviation(R, mean_arith(R))^2
+semivariance(R::SimpleReturn) = downsidedeviation(R, mean_arith(R))^2
+"""
+    semivariance(R::LogReturn)
+
+Calculates the semi variance of a LogReturn.
+"""
+semivariance(R::LogReturn) = downsidedeviation(R, mean_arith(R))^2
+
+
 
 qnorm(p) = quantile(Normal(0,1), p)
+qtdist(p, shape) = quantile(TDist(shape), p)
 
 
 """
-    valueatrisk(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian")
+    valueatrisk(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape = 6)
 
 Calculates the Value at Risk (VaR) for a return series and a probility level `p`
 
 # Methods:
    * gaussian (Default)
-   * historical
+   * student
+   * simulation
    * cornish_fisher  
 
 Gaussian:
@@ -601,55 +857,90 @@ Gaussian:
 VaR_p = = \\overline{r} + \\sigma*\\Phi^{-1}(p)
 ``` 
 """
-function valueatrisk(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian")
-
+function valueatrisk(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape::Int64=6)
     if isequal(method,"gaussian")
-        return mean_arith(R) + stdvp(R)*qnorm(p)
-    elseif isequal(method,"historical")
+        return stdvp(R)*qnorm(p)
+    elseif is equal(method,"student")
+        return stdvp(R)*qtdist(p, shape) 
+    elseif isequal(method,"simulation")
         return  quantile(R, p)
     elseif isequal(method,"cornish_fisher")
         q = quantile(Normal(), p)
         S = skew(R,"simple")
         K = kurt(R,"excess")
         cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        return (mean_arith(R) + stdvp(R)*cf)
+        return (stdvp(R)*cf)
     else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, historical, cornish_fisher"))
+        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
     end
 end
+
 """
-    valueatrisk(R::AssetReturn,p::Number,method::AbstractString="gaussian")
+    valueatrisk(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape = 6)
 
 Calculates the Value at Risk (VaR) for a return series and a probility level `p`
-
+    
 # Methods:
    * gaussian (Default)
-   * historical
+   * student (Default shape = 6)
+   * simulation
    * cornish_fisher  
 """
-function valueatrisk(R::AssetReturn,p::Number,method::AbstractString="gaussian")
-
+function valueatrisk(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
     if isequal(method,"gaussian")
-        return mean_arith(R) + stdvp(R)*qnorm(p)
-    elseif isequal(method,"historical")
-        return  quantile(R.values, p)
+        return stdvp(R)*qnorm(p)
+    elseif is equal(method,"student")
+        return stdvp(R)*qtdist(p, shape) 
+    elseif isequal(method,"simulation")
+        return  quantile(R, p)
     elseif isequal(method,"cornish_fisher")
         q = quantile(Normal(), p)
         S = skew(R,"simple")
         K = kurt(R,"excess")
         cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        return (mean_arith(R) + stdvp(R)*cf)
+        return (stdvp(R)*cf)
     else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, historical, cornish_fisher"))
+        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
     end
 end
+
 """
-    expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian")
+    valueatrisk(R::LogReturn,p::Number,method::AbstractString="gaussian", shape = 6)
+
+Calculates the Value at Risk (VaR) for a return series and a probility level `p`
+    
+# Methods:
+   * gaussian (Default)
+   * student  (Default shape = 6)
+   * simulation
+   * cornish_fisher  
+"""
+function valueatrisk(R::LogReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
+    if isequal(method,"gaussian")
+        return stdvp(R)*qnorm(p)
+    elseif is equal(method,"student")
+        return stdvp(R)*qtdist(p, shape) 
+    elseif isequal(method,"simulation")
+        return  quantile(R, p)
+    elseif isequal(method,"cornish_fisher")
+        q = quantile(Normal(), p)
+        S = skew(R,"simple")
+        K = kurt(R,"excess")
+        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
+        return (stdvp(R)*cf)
+    else
+        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
+    end
+end
+
+"""
+    expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape::Int64=6)
 
 Calculates the Expected Tail Loss for a return series and a probility level `p`
 
 # Methods:
    * gaussian (Default)
+   * student  (Default shape = 6)
    * historical
    * cornish_fisher  
  
@@ -658,10 +949,12 @@ Gaussian:
 ExpectedTailLoss_p = \\overline{r} + \\sigma*\\frac{\\phi(\\Phi^{-1}(p))}{1-p} \\text{ where }\\Phi^{-1}\\text{ is the inverse of the normal CDF (quantile) and }\\phi\\text{ is the pdf or the standard normal}
 ```
 """
-function expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian")
+function expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape::Int64=6)
     if isequal(method,"gaussian")
-        return mean_arith(R) + stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
-    elseif isequal(method,"historical")
+        return  stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
+    elseif isequal(method,"student")
+        return  stdvp(R)* (pdf(TDist(shape),qtdist(p, shape))/(1-p))
+    elseif isequal(method,"simulation")
         R_s = sort(R)
         bound =floor(Int64,size(R_s)[1]*p)
         return  mean_arith(R_s[1:bound])    
@@ -672,25 +965,29 @@ function expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractS
         cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
         npdf = pdf(Normal(),cf)
         cf1 = -1/p*npdf * (1 + 1/6*(cf^3)*S + 1/72*(cf^6 - 9cf^4 + 9cf^2 + 3)*S^2 + 1/24*(cf^4 - 2cf^2 - 1)*K)
-        return (mean_arith(R) + stdvp(R)*cf1)
+        return (stdvp(R)*cf1)
     else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, historical, cornish_fisher"))
+        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
     end
 end
+
 """
-    expectedtailloss(R::AssetReturn,p::Number,method::AbstractString="gaussian")
+    expectedtailloss(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
 
 Calculates the Expected Tail Loss for a return series and a probility level `p`
 
 # Methods:
    * gaussian (Default)
+   * student  (Default shape = 6)
    * historical
    * cornish_fisher  
 """
-function expectedtailloss(R::AssetReturn,p::Number,method::AbstractString="gaussian")
+function expectedtailloss(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
     if isequal(method,"gaussian")
         return mean_arith(R) + stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
-    elseif isequal(method,"historical")
+    elseif isequal(method,"student")
+        return  stdvp(R)* (pdf(TDist(shape),qtdist(p, shape))/(1-p))
+    elseif isequal(method,"simulation")
         R_s = sort(R.values)
         bound =floor(Int64,size(R_s)[1]*p)
         return  mean_arith(R_s[1:bound])    
@@ -701,9 +998,41 @@ function expectedtailloss(R::AssetReturn,p::Number,method::AbstractString="gauss
         cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
         npdf = pdf(Normal(),cf)
         cf1 = -1/p*npdf * (1 + 1/6*(cf^3)*S + 1/72*(cf^6 - 9cf^4 + 9cf^2 + 3)*S^2 + 1/24*(cf^4 - 2cf^2 - 1)*K)
-        return (mean_arith(R) + stdvp(R)*cf1)
+        return (stdvp(R)*cf1)
     else
         throw(ArgumentError("$method does not exist please choose one from: gaussian, historical, cornish_fisher"))
+    end
+end
+
+"""
+    expectedtailloss(R::LogReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
+
+Calculates the Expected Tail Loss for a return series and a probility level `p`
+
+# Methods:
+   * gaussian (Default)
+   * historical
+   * cornish_fisher  
+"""
+function expectedtailloss(R::LogReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
+    if isequal(method,"gaussian")
+        return mean_arith(R) + stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
+    elseif isequal(method,"student")
+        return  stdvp(R)* (pdf(TDist(shape),qtdist(p, shape))/(1-p))
+    elseif isequal(method,"simulation")
+        R_s = sort(R.values)
+        bound =floor(Int64,size(R_s)[1]*p)
+        return  mean_arith(R_s[1:bound])    
+    elseif isequal(method,"cornish_fisher")
+        q = quantile(Normal(), p)
+        S = skew(R,"simple")
+        K = kurt(R,"excess")
+        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
+        npdf = pdf(Normal(),cf)
+        cf1 = -1/p*npdf * (1 + 1/6*(cf^3)*S + 1/72*(cf^6 - 9cf^4 + 9cf^2 + 3)*S^2 + 1/24*(cf^4 - 2cf^2 - 1)*K)
+        return (stdvp(R)*cf1)
+    else
+        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
     end
 end
 
@@ -720,12 +1049,20 @@ HurstIndex = \\frac{log(\\frac{[max(r) - min(r)]}{\\sigma})}{log(n)}
 """
 hurstindex(R::AbstractArray{<:Number}) = log(  (maximum(R) - minimum(R))/stdvs(R)   )/log(length(R))
 """
-    hurstindex(R::AssetReturn)
+    hurstindex(R::SimpleReturn)
 
 Measures whether returns are random, peristent, or mean reverting.
 
 """
-hurstindex(R::AssetReturn) = log(  (maximum(R.values) - minimum(R.values))/stdvs(R)   )/log(length(R.values))
+hurstindex(R::SimpleReturn) = log(  (maximum(R.values) - minimum(R.values))/stdvs(R)   )/log(length(R.values))
+
+"""
+    hurstindex(R::LogReturn)
+
+Measures whether returns are random, peristent, or mean reverting.
+
+"""
+hurstindex(R::LogReturn) = log(  (maximum(R.values) - minimum(R.values))/stdvs(R)   )/log(length(R.values))
 
 
 
@@ -746,7 +1083,8 @@ kappa(R::AbstractArray{<:Number},MAR::Number=0.;k::Number=2) = (mean_arith(R) - 
 If k=1 this returns the Sharpe-Omega Ratio.
 If k=2 this returns the Sortino Ratio
 """
-kappa(R::AssetReturn,MAR::Number=0.;k::Number=2) = (mean_arith(R) - MAR) / ( (1/length(R.values)) *sum((max.(MAR .- R.values,0)).^k) )^(1/k)
+kappa(R::SimpleReturn,MAR::Number=0.;k::Number=2) = (mean_arith(R) - MAR) / ( (1/length(R.values)) *sum((max.(MAR .- R.values,0)).^k) )^(1/k)
+kappa(R::LogReturn,MAR::Number=0.;k::Number=2) = (mean_arith(R) - MAR) / ( (1/length(R.values)) *sum((max.(MAR .- R.values,0)).^k) )^(1/k)
 
 
 """
@@ -761,15 +1099,22 @@ PainIndex = \\sum_{t=1}^n \\frac{|D_t|}{n}\\text{ where }D_t\\text{ is the drawd
 """
 painindex(R::AbstractArray{<:Number}) = sum( abs.(drawdownpeak(R))./length(R) )
 """
-    painindex(R::AssetReturn)
+    painindex(R::SimpleReturn)
 
 Calculates the Pain Index.
 """
-painindex(R::AssetReturn) = sum( abs.(drawdownpeak(R.values))./length(R.values) ) 
+painindex(R::SimpleReturn) = sum( abs.(drawdownpeak(R.values))./length(R.values) ) 
+"""
+    painindex(R::LogReturn)
+
+Calculates the Pain Index.
+"""
+painindex(R::LogReturn) = sum( abs.(drawdownpeak(R.values))./length(R.values) ) 
 
 
 μn(R,n) = mean_arith((R .- mean_arith(R)).^(n))
-μn(R::AssetReturn,n) = mean_arith((R.values .- mean_arith(R)).^(n))
+μn(R::SimpleReturn,n) = mean_arith((R.values .- mean_arith(R)).^(n))
+μn(R::LogReturn,n) = mean_arith((R.values .- mean_arith(R)).^(n))
 
 """
     covariance(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number};corrected::Bool=false)
@@ -792,12 +1137,26 @@ function covariance(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number};corr
     end
 end
 """
-    covariance(Ra::AssetReturn,Rb::AssetReturn;corrected::Bool=false)
+    covariance(Ra::LogReturn,Rb::LogReturn;corrected::Bool=false)
 
-Calculates the CoVariance of two asset returns.
+Calculates the Covariance of two asset returns.
 
 """
-function covariance(Ra::AssetReturn,Rb::AssetReturn;corrected::Bool=false)
+function covariance(Ra::LogReturn,Rb::LogReturn;corrected::Bool=false)
+    @assert length(Ra.values) == length(Rb.values) "Ra and Rb must be of same length"
+    if corrected
+        return sum((Ra.values .- mean_arith(Ra)).*(Rb.values .- mean_arith(Rb)))/(length(Ra.values)-1)
+    else
+        return mean_arith(  (Ra.values .- mean_arith(Ra)).*(Rb.values .- mean_arith(Rb)))
+    end
+end
+"""
+    covariance(Ra::SimpleReturn,Rb::SimpleReturn;corrected::Bool=false)
+
+Calculates the Covariance of two asset returns.
+
+"""
+function covariance(Ra::SimpleReturn,Rb::SimpleReturn;corrected::Bool=false)
     @assert length(Ra.values) == length(Rb.values) "Ra and Rb must be of same length"
     if corrected
         return sum((Ra.values .- mean_arith(Ra)).*(Rb.values .- mean_arith(Rb)))/(length(Ra.values)-1)
@@ -806,6 +1165,7 @@ function covariance(Ra::AssetReturn,Rb::AssetReturn;corrected::Bool=false)
     end
 end
 
+#=
 """
     coskew(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number})
 
@@ -842,7 +1202,8 @@ Calculates the symmetric CoKurtosis of two returns (i.e. Cokurt(Ra,Ra,Rb,Rb))
 """
 cokurt(Ra::AssetReturn,Rb::AssetReturn) = ( mean_arith( ((Ra.values .- mean_arith(Ra)).^2).*((Rb.values .- mean_arith(Rb)).^2))) / ((stdvp(Ra)^2)*(stdvp(Ra)^2))
 
-    
+=#
+
 """
     specificrisk(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},Rf::Number=0)
 
@@ -854,11 +1215,11 @@ SpecificRisk = std(\\epsilon_t) = std((r_{a,t} -r_f) - \\alpha - \\beta\\times(r
 """
 specificrisk(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},Rf::Number=0)= stdvs(factor_resid(Ra.-Rf,Rb.-Rf))
 """
-    specificrisk(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0)
+    specificrisk(Ra::LogReturn,Rb::LogReturn,Rf::Number=0)
 
-The spicific risk is calculated as the standard deviation of the residuals from a factor regression.
+The specific risk is calculated as the standard deviation of the residuals from a factor regression.
 """
-specificrisk(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0)= stdvs(factor_resid(Ra.values .-Rf,Rb.values .-Rf))
+specificrisk(Ra::LogReturn,Rb::LogReturn,Rf::Number=0)= stdvs(factor_resid(Ra.values .-Rf,Rb.values .-Rf))
 
 
 """
@@ -871,11 +1232,18 @@ SystematicRisk = \\beta_{r_a,r_b}\\times std(R_b)
 """
 systematicrisk(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},Rf::Number=0) = factor_regression(Ra.-Rf,Rb.-Rf)[2]*stdvs(Rb)
 """
-    systematicrisk(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0)
+    systematicrisk(Ra::SimpleReturn,Rb::SimpleReturn,Rf::Number=0)
 
 Calculated by multipling the factor loading from a linear factor model of the return against the benchmark return by the standard deviation of the benchmark return.
 """
-systematicrisk(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0) = factor_regression(Ra.values .-Rf,Rb.values .-Rf)[2]*stdvs(Rb)
+systematicrisk(Ra::SimpleReturn,Rb::SimpleReturn,Rf::Number=0) = factor_regression(Ra.values .-Rf,Rb.values .-Rf)[2]*stdvs(Rb)
+"""
+    systematicrisk(Ra::LogReturn,Rb::LogReturn,Rf::Number=0)
+
+Calculated by multipling the factor loading from a linear factor model of the return against the benchmark return by the standard deviation of the benchmark return.
+"""
+systematicrisk(Ra::LogReturn,Rb::LogReturn,Rf::Number=0) = factor_regression(Ra.values .-Rf,Rb.values .-Rf)[2]*stdvs(Rb)
+
 
 """
     totalrisk(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},Rf::Number=0)
@@ -889,11 +1257,18 @@ TotalRisk = \\sqrt{SystematicRisk^2+SpecificRisk^2}
 totalrisk(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},Rf::Number=0) = sqrt(systematicrisk(Ra,Rb,Rf)^2 + specificrisk(Ra,Rb,Rf)^2)
 
 """
-    totalrisk(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0)
+    totalrisk(Ra::LogReturn,Rb::LogReturn,Rf::Number=0)
 
 Total risk is defined as a combination of systematic and specific risk.
 """
-totalrisk(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0) = sqrt(systematicrisk(Ra,Rb,Rf)^2 + specificrisk(Ra,Rb,Rf)^2)
+totalrisk(Ra::LogReturn,Rb::LogReturn,Rf::Number=0) = sqrt(systematicrisk(Ra,Rb,Rf)^2 + specificrisk(Ra,Rb,Rf)^2)
+"""
+    totalrisk(Ra::SimpleReturn,Rb::SimpleReturn,Rf::Number=0)
+
+Total risk is defined as a combination of systematic and specific risk.
+"""
+totalrisk(Ra::SimpleReturn,Rb::SimpleReturn,Rf::Number=0) = sqrt(systematicrisk(Ra,Rb,Rf)^2 + specificrisk(Ra,Rb,Rf)^2)
+
     
 """
     trackingerror(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},scale::Number=1)
@@ -905,11 +1280,17 @@ TrackingError(r_a,r_b) = \\sqrt{\\sum_{t=1}^n\\frac{(r_{a,t} -r_{b,t})^2}{n}}
 """
 trackingerror(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},scale::Number=1) = sqrt( sum( ((Ra.-Rb).^2)./(length(Ra)) ) )*sqrt(scale)
 """
-    trackingerror(Ra::AssetReturn,Rb::AssetReturn)
+    trackingerror(Ra::LogReturn,Rb::LogReturn)
 
 Measures how well a return tracks its benchmark.
 """
-trackingerror(Ra::AssetReturn,Rb::AssetReturn) = sqrt( sum( ((Ra.values.-Rb.values).^2)./(length(Ra.values))))*sqrt(Ra.scale)
+trackingerror(Ra::LogReturn,Rb::LogReturn) = sqrt( sum( ((Ra.values.-Rb.values).^2)./(length(Ra.values))))*sqrt(Ra.scale)
+"""
+    trackingerror(Ra::SimpleReturn,Rb::SimpleReturn)
+
+Measures how well a return tracks its benchmark.
+"""
+trackingerror(Ra::SimpleReturn,Rb::SimpleReturn) = sqrt( sum( ((Ra.values.-Rb.values).^2)./(length(Ra.values))))*sqrt(Ra.scale)
 
 
 """
@@ -926,11 +1307,19 @@ function informationratio(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number
         return (activepremium(Ra,Rb,scalea=scale,scaleb=scale) /trackingerror(Ra,Rb,scale))
 end
 """
+    informationratio(Ra::LogReturn,Rb::LogReturn)
+
+Calculates the Information Ratio. It is defined as the Active Premium over the Tracking Error.
+"""
+function informationratio(Ra::LogReturn,Rb::LogReturn)
+    return (activepremium(Ra,Rb) / trackingerror(Ra,Rb))
+end
+"""
     informationratio(Ra::AssetReturn,Rb::AssetReturn)
 
 Calculates the Information Ratio. It is defined as the Active Premium over the Tracking Error.
 """
-function informationratio(Ra::AssetReturn,Rb::AssetReturn)
+function informationratio(Ra::SimpleReturn,Rb::SimpleReturn)
     return (activepremium(Ra,Rb) / trackingerror(Ra,Rb))
 end
    
@@ -965,7 +1354,20 @@ end
 
 Calculates the Treynor Ratio.
 """
-function treynorratio(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0;modified::Bool=false)
+function treynorratio(Ra::SimpleReturn,Rb::SimpleReturn,Rf::Number=0;modified::Bool=false)
+    if modified
+        risk = systematicrisk(Ra,Rb,Rf)*sqrt(Ra.scale)
+    else
+        risk = factor_regression(Ra.values .-Rf,Rb.values .-Rf)[2]
+    end
+    return ((mean_geo(Ra.values .-Rf)+1)^(Ra.scale) -1)  /risk
+end
+"""
+    treynorratio(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0;modified::Bool=false)
+
+Calculates the Treynor Ratio.
+"""
+function treynorratio(Ra::LogReturn,Rb::LogReturn,Rf::Number=0;modified::Bool=false)
     if modified
         risk = systematicrisk(Ra,Rb,Rf)*sqrt(Ra.scale)
     else
@@ -997,7 +1399,19 @@ end
 
 Returns the annualized Jensens Alpha.
 """
-function jensensalpha(Y::AssetReturn,X::AssetReturn...)
+function jensensalpha(Y::LogReturn,X::LogReturn...)
+    coefs = factor_regression(Y,X...)[2:end]
+    y_bar = annualize(mean_geo(Y),Y.scale)
+    x_bars = annualize.(mean_geo.(X),Y.scale)
+    α = y_bar - sum( coefs.*x_bars)
+    return α
+end
+"""
+    jensensalpha(Y::AssetReturn,X::AssetReturn...)
+
+Returns the annualized Jensens Alpha.
+"""
+function jensensalpha(Y::SimpleReturn,X::SimpleReturn...)
     coefs = factor_regression(Y,X...)[2:end]
     y_bar = annualize(mean_geo(Y),Y.scale)
     x_bars = annualize.(mean_geo.(X),Y.scale)
@@ -1034,7 +1448,24 @@ end
 
 Jensen's Alpha adjusted for risk.
 """
-function appraisalratio(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0;method::AbstractString = "appraisal")
+function appraisalratio(Ra::LogReturn,Rb::LogReturn,Rf::Number=0;method::AbstractString = "appraisal")
+    if isequal(method,"appraisal")
+        return jensensalpha(Ra.values .-Rf, Rb.values .-Rf,scale=Ra.scale)/ (specificrisk(Ra,Rb,Rf)*sqrt(Ra.scale))
+    elseif isequal(method,"modified")
+        return jensensalpha(Ra.values .-Rf, Rb.values .-Rf,scale=Ra.scale)/ (factor_regression(Ra.values .-Rf, Rb.values .-Rf)[2])
+    elseif isequal(method,"alternative")
+        return jensensalpha(Ra.values .-Rf, Rb.values .-Rf,scale=Ra.scale)/ (systematicrisk(Ra,Rb,Rf)*sqrt(Ra.scale))
+    else
+        throw("Method not valid choose from: appraisal, modified, alternative")
+    end
+end
+
+"""
+    appraisalratio(Ra::AssetReturn,Rb::AssetReturn,Rf::Number=0;method::AbstractString = "appraisal")
+
+Jensen's Alpha adjusted for risk.
+"""
+function appraisalratio(Ra::SimpleReturn,Rb::SimpleReturn,Rf::Number=0;method::AbstractString = "appraisal")
     if isequal(method,"appraisal")
         return jensensalpha(Ra.values .-Rf, Rb.values .-Rf,scale=Ra.scale)/ (specificrisk(Ra,Rb,Rf)*sqrt(Ra.scale))
     elseif isequal(method,"modified")

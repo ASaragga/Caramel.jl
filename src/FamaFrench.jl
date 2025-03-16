@@ -1,6 +1,6 @@
 # Loads Daily FF Factors Returns from K. French Website data library at https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
 
-function ff(Model::String)
+function get_ff_factors(Model::String)
     if Model == "FF3"
         tables, tablenotes, filenotes = readFamaFrench("F-F_Research_Data_Factors_daily")
         FF3 = tables[1]
