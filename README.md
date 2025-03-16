@@ -1,3 +1,3 @@
 # Caramel
-![](Picture1.jpg?raw=true)
+![](Picture1.png?raw=true)
 
