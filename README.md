@@ -5,6 +5,7 @@
 ### $\blacktriangleright$ Gestão de Riscos Financeiros (GRF)
 ### $\blacktriangleright$ Mercados e Produtos Financeiros (MPF)
 
+***
 
 
 # 1 - Guia de Instalação e Desenvolvimento Julia
