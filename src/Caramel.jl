@@ -1,7 +1,5 @@
 module Caramel
     # Dependencies:
-    using Reexport
-    using Base64
     using Random
     using Dates
     using HTTP
