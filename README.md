@@ -10,7 +10,7 @@
 
 # 1 - Guia de Instalação e Desenvolvimento Julia
 
-## 1.1 - Instalação do Julia
+## 1.1 - Instalação da Linguagem de Programação Julia
 
 1 Transferir Julia
 
