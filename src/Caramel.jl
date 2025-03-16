@@ -9,7 +9,7 @@ module Caramel
     using XLSX
     using SQLite, DuckDB
     using OrderedCollections
-    using Plots
+    # using Plots
 
     export Date, today
 
@@ -97,7 +97,7 @@ module Caramel
     export get_commodity_prices
 
     #From Plots.jl
-    export qqplot
+    # export qqplot
     
     const FRED_API_KEY = "c703a36c86fac6e4f12a0a40fffda61f"
     const data_path = joinpath(@__DIR__(), "..", "data")
@@ -118,5 +118,5 @@ module Caramel
     include("Financials.jl");
     include("General.jl");
     include("FamaFrench.jl");
-    include("Plots.jl")
+    # include("Plots.jl")
 end
