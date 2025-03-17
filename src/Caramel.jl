@@ -45,8 +45,8 @@ module Caramel
     import DataFrames: DataFrame    
     export DataFrame  # Optional—consider removing
 
-    import: Optim: LBFGS
-    export: LBFGS
+    import Optim: LBFGS, Fminbox, optimize
+    export LBFGS, Fminbox, optimize
     #####
 
     # From Structs.jl
