@@ -188,6 +188,7 @@ end
 
 
 ################################
+
 # Regression Based Metrics:
 """
     factor_regression(Y::AbstractArray{<:Number},X::AbstractArray{<:Number}...;intercept::Bool=true)
@@ -282,3 +283,23 @@ function factor_resid(Y::Asset,X::Asset...;intercept::Bool=true)
     β = (inv(Xs'*Xs)*Xs'*Y.values)
     return Y.values - (β'*Xs')'
 end
+
+
+function fit_TDist(data)
+    function neg_log_likelihood(params)
+        mu, sigma, nu = params
+        dist = TDist(nu) * sigma + mu
+        return -sum(logpdf.(dist, data))
+    end
+    
+    # Initial guess: [mean, std, degrees_of_freedom]
+    initial_params = [mean(data), std(data), 6.0]
+    
+    # Optimization
+    result = optimize(neg_log_likelihood, initial_params, LBFGS())
+    
+    params = Optim.minimizer(result)
+    mu, sigma, nu = params
+    return mu, sigma, nu
+end
+  

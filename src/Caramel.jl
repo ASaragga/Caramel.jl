@@ -9,6 +9,7 @@ module Caramel
     using XLSX
     using SQLite, DuckDB
     using OrderedCollections
+    using Optim
     # using Plots
 
     export Date, today
@@ -52,6 +53,7 @@ module Caramel
     # From Stats.jl
     export mean_arith,mean_geo,varp,vars,stdvp,stdvs,skew,kurt
     export factor_regression,factor_alpha,factor_loadings,factor_resid
+    export fit_TDist
 
     #From Returns.jl
     export pct_change,log_diff,simple_diff
@@ -74,8 +76,7 @@ module Caramel
     export get_ff_factors
 
     #From Symmbols.jl
-    export SP500, DJ30, NASDAQ, VOL, FTSE100, DAX40, CAC40, FTSEMIB, SMI, PSI,
-    EUROSTOXX50, NIKKEI225, HKSE, ASX50
+    export SP500, DJ30, NASDAQ, VOL, FTSE100, DAX40, CAC40, FTSEMIB, SMI, PSI, EUROSTOXX50, NIKKEI225, HKSE, ASX50
     export symbols
 
     #From Databases.jl
@@ -97,7 +98,7 @@ module Caramel
     export get_commodity_prices
 
     #From Plots.jl
-    # export qqplot
+    #export scatter, qqplot
     
     const FRED_API_KEY = "c703a36c86fac6e4f12a0a40fffda61f"
     const data_path = joinpath(@__DIR__(), "..", "data")
@@ -118,5 +119,5 @@ module Caramel
     include("Financials.jl");
     include("General.jl");
     include("FamaFrench.jl");
-    # include("Plots.jl")
+    #include("Plots.jl")
 end
