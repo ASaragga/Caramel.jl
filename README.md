@@ -39,7 +39,7 @@ Primeiro, no início de cada sessão, teremos sempre que alterar o runtime do Go
   <img src="ColabRuntime.png?raw=true" alt="Colab Runtime" width="700">
 </p>
 
-Uma vez definido o runtime como Julia, para fazer a instalação da b+iblioteca Caramel.jl no Google Colab,
+Uma vez definido o runtime como Julia, para fazer a instalação da biblioteca Caramel.jl no Google Colab,
 
 <p align="center">
   <img src="GoogleColab.png?raw=true" alt="Instalação Caramel" width="700">
@@ -56,7 +56,7 @@ Neste caso estamos a instalar o pacote Distributions que dá acesso a um grande 
 A instalação de pactores apenas necessita de ser feita uma vez. 
 
 ### 1.2.4 - Usando as Bibliotecas: Comando `using`
-Antes de os pacotes instalados, incluindo o Caramel.jl, poderem ser utilizados numa sessão, teremos de recorrer ao comando: using, como no seguinte exemplo,
+Antes de as bibliotecas instalados poderem ser utilizados numa sessão, teremos de recorrer ao comando: `using`, como no seguinte exemplo,
 ```
 using Caramel
 
