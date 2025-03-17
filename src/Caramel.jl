@@ -44,7 +44,9 @@ module Caramel
     # DataFrames: Consider not exporting it
     import DataFrames: DataFrame    
     export DataFrame  # Optional—consider removing
- 
+
+    import: Optim: LBFGS
+    export: LBFGS
     #####
 
     # From Structs.jl
