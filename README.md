@@ -56,14 +56,14 @@ Neste caso estamos a instalar o pacote Distributions que dá acesso a um grande 
 A instalação de pactores apenas necessita de ser feita uma vez. 
 
 ### 1.2.4 - Usando as Bibliotecas: Comando `using`
-Antes de as bibliotecas instalados poderem ser utilizados numa sessão, teremos de recorrer ao comando: `using`, como no seguinte exemplo,
+Antes de as bibliotecas instalados poderem ser utilizados numa sessão, teremos de recorrer ao comando: using, como no seguinte exemplo,
 ```
 using Caramel
 
 p = AssetPrice("IBM",Date(2025,02,01), Date(2025,03,03))
 println(DataFrame(p))
 ```
-Utilizamos a função AssetPrice para extrair a partir do website Yahoo Finance as cotações das ações da IBM para o período compreendido entre 1 de Fevereiro e 3 de Março de 2025. `DataFrame` organiza os dados numa tabela e println imprime a informação recolhida. A coluna :adjclose apresenta o histórico das cotações de fecho das sessões diárias da New York Stock Exchange, ajustadas por emissão de novas ações, pagamento de dividendos, stock splits e reverse splits ocorridos ao longo do tempo.
+Utilizamos a função AssetPrice para extrair a partir do website Yahoo Finance as cotações das ações da IBM para o período compreendido entre 1 de Fevereiro e 3 de Março de 2025. DataFrame organiza os dados numa tabela e println imprime a informação recolhida. A coluna :adjclose apresenta o histórico das cotações de fecho das sessões diárias da New York Stock Exchange, ajustadas por emissão de novas ações, pagamento de dividendos, stock splits e reverse splits ocorridos ao longo do tempo.
 
 
 
