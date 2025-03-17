@@ -310,14 +310,14 @@ function DataFrame(data::LogReturn)
         symbol = data.id
         interval = data.freq
         type = "log"
-        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, r = returns)
+        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, returns = returns)
     else
         dates = data.timestamp
         returns = round.(data.values, digits=6)  # Extract returns and round to 6 decimals
         symbol = data.id
         interval = data.freq
         type = "log"
-        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, r = returns)
+        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, returns = returns)
     end
 end
 
@@ -327,12 +327,12 @@ function DataFrame(data::SimpleReturn)
         returns = round.(data.values, digits=6)  # Extract returns and round to 6 decimals
         symbol = data.id
         type = "simple"
-        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, r = returns)
+        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, returns = returns)
     else
         dates = data.timestamp
         returns = round.(data.values, digits=6)  # Extract returns and round to 6 decimals
         symbol = data.id
         type = "simple"
-        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, r = returns)
+        return DataFrame(ticker = symbol, date = dates, interval = interval, type = type, returns = returns)
     end
 end
