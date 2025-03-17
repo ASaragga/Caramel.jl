@@ -285,21 +285,29 @@ function factor_resid(Y::Asset,X::Asset...;intercept::Bool=true)
 end
 
 
-function fit_TDist(data)
-    function neg_log_likelihood(params)
-        mu, sigma, nu = params
-        dist = TDist(nu) * sigma + mu
-        return -sum(logpdf.(dist, data))
+function fit_mle(::Type{TDist}, data)
+    # Define the log-likelihood function for the Student's t-distribution
+    function log_likelihood(params, data)
+        ν, μ, s = params
+        if ν <= 0 || s <= 0  # Ensure valid parameters
+            return Inf  # Return a large penalty for invalid parameters
+        end
+        return -sum(logpdf(TDist(ν), (x - μ) / s) - log(s) for x in data)
     end
-    
-    # Initial guess: [mean, std, degrees_of_freedom]
-    initial_params = [mean(data), std(data), 6.0]
-    
-    # Optimization
-    result = optimize(neg_log_likelihood, initial_params, LBFGS())
-    
-    params = Optim.minimizer(result)
-    mu, sigma, nu = params
-    return mu, sigma, nu
+
+    # Initial guesses for ν (degrees of freedom), μ (mean), and s (scale)
+    initial_guess = [5.0, mean(data), std(data)]  # Use sample std for (s)
+
+    # Define lower and upper bounds for the parameters
+    lower_bounds = [0.1, -Inf, 1e-6]  # ν > 0, μ unrestricted, s > 1e-6
+    upper_bounds = [Inf, Inf, Inf]    # No upper bounds for ν, μ, and s
+
+    # Optimize using bounded LBFGS to ensure valid parameters
+    result = optimize(params -> log_likelihood(params, data), 
+                      lower_bounds, upper_bounds, 
+                      initial_guess, Fminbox(LBFGS()))
+
+    # Extract the fitted parameters
+    ν_fit, μ_fit, s_fit = result.minimizer
+    return ν_fit, μ_fit, s_fit
 end
-  
