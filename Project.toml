@@ -1,7 +1,7 @@
 name = "Caramel"
 uuid = "4015ef85-44f9-4b20-865f-ed888b105418"
 authors = ["Antonio Saragga Seabra"]
-version = "0.0.1-DEV"
+version = "0.0.2"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
