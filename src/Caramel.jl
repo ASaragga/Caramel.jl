@@ -3,6 +3,7 @@ module Caramel
     using LinearAlgebra
     using Random
     using Dates 
+    using Distributions
     using Tables
     using HTTP
     using JSON3
