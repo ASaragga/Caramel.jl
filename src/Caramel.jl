@@ -28,8 +28,8 @@ module Caramel
     export mad, quantile, quantilerank, describe
 
     # Probability distributions
-    import Distributions: Normal, TDist, pdf, cdf
-    export Normal, TDist, pdf, cdf
+    import Distributions: Normal, TDist, pdf, cdf, logpdf
+    export Normal, TDist, pdf, cdf, logpdf
 
     # CSV
     import CSV: read, write
