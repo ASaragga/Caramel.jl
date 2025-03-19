@@ -74,9 +74,10 @@ module Caramel
     export drawdown,drawdownpeak,maxdrawdown,avgdrawdown,drawdown_table,annualize
     export activepremium,sharperatio,adjustedsharpe,bernardoledoitratio
     export burkeratio,calmarratio,downsidedeviation,downsidepotential,semideviation
-    export semivariance,valueatrisk,expectedtailloss,hurstindex,kappa,painindex,covariance
+    export semivariance, hurstindex,kappa,painindex,covariance
     export coskew,cokurt,specificrisk,systematicrisk,totalrisk,trackingerror,jensensalpha
     export informationratio,treynorratio,appraisalratio
+    export VaR, ETL, VaR_ETL
 
     #From FamaFrench.jl
     export get_ff_factors
