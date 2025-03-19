@@ -869,7 +869,7 @@ function ETL(returns::Vector{<:Real}, alpha::Real, dist::Distribution, mu::Real=
     if dist isa Normal
         ETL = -mu + sigma * pdf(dist, q) / alpha  
     elseif dist isa TDist
-        v = params(dist)[1]
+        v = dist.ν
         t_pdf = pdf(dist, q) 
         ETL = -mu + sigma * (t_pdf / alpha) * (v + q^2) / (v - 1)
     else # Numerical integration fallback
