@@ -3,7 +3,6 @@ module Caramel
     using LinearAlgebra
     using Random
     using Dates 
-    using Distributions
     using Tables
     using HTTP
     using JSON3
@@ -11,6 +10,8 @@ module Caramel
     using SQLite, DuckDB
     using OrderedCollections
     using Optim
+    using QuadGK
+
     # using Plots
 
     export Date, today
@@ -29,25 +30,27 @@ module Caramel
     export mad, quantile, quantilerank, describe
 
     # Probability distributions
-    import Distributions: Normal, TDist, pdf, cdf, logpdf, LocationScale
-    export Normal, TDist, pdf, cdf, logpdf, LocationScale
+    import Distributions: Normal, TDist, pdf, cdf, logpdf
+    export Normal, TDist, pdf, cdf, logpdf
 
     # CSV
     import CSV: read, write
     export read, write
 
     # Databases
-    import DBInterface: execute, close!
-    const sql = DBInterface.execute   # Using `const` improves performance
+    import DBInterface: execute, connect, close!
+    const sql = DBInterface.execute   
+    const db_connect = DBInterface.connect
     const db_close = DBInterface.close!
-    export sql, db_close
+    export sql, db_connect, db_close
 
     # DataFrames: Consider not exporting it
     import DataFrames: DataFrame    
     export DataFrame  # Optional—consider removing
+ 
+ 
+ 
 
-    import Optim: LBFGS, Fminbox, optimize
-    export LBFGS, Fminbox, optimize
     #####
 
     # From Structs.jl
@@ -56,7 +59,7 @@ module Caramel
     # From Stats.jl
     export mean_arith,mean_geo,varp,vars,stdvp,stdvs,skew,kurt
     export factor_regression,factor_alpha,factor_loadings,factor_resid
-    export fit_TDist
+    export fit_mle
 
     #From Returns.jl
     export pct_change,log_diff,simple_diff
@@ -100,12 +103,6 @@ module Caramel
     #From CommodityPrices.jl
     export get_commodity_prices
 
-    #From Plots.jl
-    #export scatter, qqplot
-    
-    const FRED_API_KEY = "c703a36c86fac6e4f12a0a40fffda61f"
-    const data_path = joinpath(@__DIR__(), "..", "data")
-
     include("Utilities.jl");
     include("Structs.jl");
     include("Stats.jl");
@@ -121,6 +118,5 @@ module Caramel
     include("Databases.jl");
     include("Financials.jl");
     include("General.jl");
-    include("FamaFrench.jl");
-    #include("Plots.jl")
+    include("FamaFrench.jl")
 end
