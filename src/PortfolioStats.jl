@@ -835,206 +835,125 @@ Calculates the semi variance of a LogReturn.
 """
 semivariance(R::LogReturn) = downsidedeviation(R, mean_arith(R))^2
 
-
-
-qnorm(p) = quantile(Normal(0,1), p)
-qtdist(p, shape) = quantile(TDist(shape), p)
-
-
-"""
-    valueatrisk(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape = 6)
-
-Calculates the Value at Risk (VaR) for a return series and a probility level `p`
-
-# Methods:
-   * gaussian (Default)
-   * student
-   * simulation
-   * cornish_fisher  
-
-Gaussian:
-```math
-VaR_p = = \\overline{r} + \\sigma*\\Phi^{-1}(p)
-``` 
-"""
-function valueatrisk(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape::Int64=6)
-    if isequal(method,"gaussian")
-        return stdvp(R)*qnorm(p)
-    elseif is equal(method,"student")
-        return stdvp(R)*qtdist(p, shape) 
-    elseif isequal(method,"simulation")
-        return  quantile(R, p)
-    elseif isequal(method,"cornish_fisher")
-        q = quantile(Normal(), p)
-        S = skew(R,"simple")
-        K = kurt(R,"excess")
-        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        return (stdvp(R)*cf)
-    else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
-    end
+function VaR(sigma::Real, alpha::Real, dist::Distribution, mu::Real=0)
+    q = quantile(dist, alpha)
+    VaR = -(mu + sigma * q)
+    return VaR
 end
 
-"""
-    valueatrisk(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape = 6)
-
-Calculates the Value at Risk (VaR) for a return series and a probility level `p`
-    
-# Methods:
-   * gaussian (Default)
-   * student (Default shape = 6)
-   * simulation
-   * cornish_fisher  
-"""
-function valueatrisk(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
-    if isequal(method,"gaussian")
-        return stdvp(R)*qnorm(p)
-    elseif is equal(method,"student")
-        return stdvp(R)*qtdist(p, shape) 
-    elseif isequal(method,"simulation")
-        return  quantile(R, p)
-    elseif isequal(method,"cornish_fisher")
-        q = quantile(Normal(), p)
-        S = skew(R,"simple")
-        K = kurt(R,"excess")
-        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        return (stdvp(R)*cf)
-    else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
-    end
+function VaR(returns::Vector{<:Real}, alpha::Real, dist::Distribution, mu::Real=0)
+    sigma = std(returns)
+    q = quantile(dist, alpha)
+    VaR = -(mu + sigma * q)
+    return VaR
 end
 
-"""
-    valueatrisk(R::LogReturn,p::Number,method::AbstractString="gaussian", shape = 6)
-
-Calculates the Value at Risk (VaR) for a return series and a probility level `p`
-    
-# Methods:
-   * gaussian (Default)
-   * student  (Default shape = 6)
-   * simulation
-   * cornish_fisher  
-"""
-function valueatrisk(R::LogReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
-    if isequal(method,"gaussian")
-        return stdvp(R)*qnorm(p)
-    elseif is equal(method,"student")
-        return stdvp(R)*qtdist(p, shape) 
-    elseif isequal(method,"simulation")
-        return  quantile(R, p)
-    elseif isequal(method,"cornish_fisher")
-        q = quantile(Normal(), p)
-        S = skew(R,"simple")
-        K = kurt(R,"excess")
-        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        return (stdvp(R)*cf)
-    else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
+function ETL(sigma::Real, alpha::Real, dist::Distribution, mu::Real=0)
+    q = quantile(dist, alpha)
+    if dist isa Normal
+        ETL = -mu + sigma * pdf(dist, q) / alpha  
+    elseif dist isa TDist
+        v = params(dist)[1]
+        t_pdf = pdf(dist, q) 
+        ETL = -mu + sigma * (t_pdf / alpha) * (v + q^2) / (v - 1)
+    else # Numerical integration fallback
+        E_X_cond, _ = quadgk(x -> x * pdf(dist, x), -Inf, q)
+        ETL = -(mu + sigma * (E_X_cond / alpha))
     end
+    return ETL
 end
 
-"""
-    expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape::Int64=6)
-
-Calculates the Expected Tail Loss for a return series and a probility level `p`
-
-# Methods:
-   * gaussian (Default)
-   * student  (Default shape = 6)
-   * historical
-   * cornish_fisher  
- 
-Gaussian:
-```math
-ExpectedTailLoss_p = \\overline{r} + \\sigma*\\frac{\\phi(\\Phi^{-1}(p))}{1-p} \\text{ where }\\Phi^{-1}\\text{ is the inverse of the normal CDF (quantile) and }\\phi\\text{ is the pdf or the standard normal}
-```
-"""
-function expectedtailloss(R::AbstractArray{<:Number},p::Number,method::AbstractString="gaussian", shape::Int64=6)
-    if isequal(method,"gaussian")
-        return  stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
-    elseif isequal(method,"student")
-        return  stdvp(R)* (pdf(TDist(shape),qtdist(p, shape))/(1-p))
-    elseif isequal(method,"simulation")
-        R_s = sort(R)
-        bound =floor(Int64,size(R_s)[1]*p)
-        return  mean_arith(R_s[1:bound])    
-    elseif isequal(method,"cornish_fisher")
-        q = quantile(Normal(), p)
-        S = skew(R,"simple")
-        K = kurt(R,"excess")
-        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        npdf = pdf(Normal(),cf)
-        cf1 = -1/p*npdf * (1 + 1/6*(cf^3)*S + 1/72*(cf^6 - 9cf^4 + 9cf^2 + 3)*S^2 + 1/24*(cf^4 - 2cf^2 - 1)*K)
-        return (stdvp(R)*cf1)
-    else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
+function ETL(returns::Vector{<:Real}, alpha::Real, dist::Distribution, mu::Real=0)
+    sigma = std(returns)
+    q = quantile(dist, alpha)
+    if dist isa Normal
+        ETL = -mu + sigma * pdf(dist, q) / alpha  
+    elseif dist isa TDist
+        v = params(dist)[1]
+        t_pdf = pdf(dist, q) 
+        ETL = -mu + sigma * (t_pdf / alpha) * (v + q^2) / (v - 1)
+    else # Numerical integration fallback
+        E_X_cond, _ = quadgk(x -> x * pdf(dist, x), -Inf, q)
+        ETL = -(mu + sigma * (E_X_cond / alpha))
     end
+    return ETL
 end
 
-"""
-    expectedtailloss(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
 
-Calculates the Expected Tail Loss for a return series and a probility level `p`
-
-# Methods:
-   * gaussian (Default)
-   * student  (Default shape = 6)
-   * historical
-   * cornish_fisher  
-"""
-function expectedtailloss(R::SimpleReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
-    if isequal(method,"gaussian")
-        return mean_arith(R) + stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
-    elseif isequal(method,"student")
-        return  stdvp(R)* (pdf(TDist(shape),qtdist(p, shape))/(1-p))
-    elseif isequal(method,"simulation")
-        R_s = sort(R.values)
-        bound =floor(Int64,size(R_s)[1]*p)
-        return  mean_arith(R_s[1:bound])    
-    elseif isequal(method,"cornish_fisher")
-        q = quantile(Normal(), p)
-        S = skew(R,"simple")
-        K = kurt(R,"excess")
-        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        npdf = pdf(Normal(),cf)
-        cf1 = -1/p*npdf * (1 + 1/6*(cf^3)*S + 1/72*(cf^6 - 9cf^4 + 9cf^2 + 3)*S^2 + 1/24*(cf^4 - 2cf^2 - 1)*K)
-        return (stdvp(R)*cf1)
-    else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, historical, cornish_fisher"))
+function VaR_ETL(sigma::Real, alpha::Real, dist::Distribution, mu::Real=0)
+    q = quantile(dist, alpha)
+    VaR = -(mu + sigma * q)
+    if dist isa Normal
+        ETL = -mu + sigma * pdf(dist, q) / alpha  
+    elseif dist isa TDist
+        v = params(dist)[1]
+        t_pdf = pdf(dist, q) 
+        ETL = -mu + sigma * (t_pdf / alpha) * (v + q^2) / (v - 1)
+    else # Numerical integration fallback
+        E_X_cond, _ = quadgk(x -> x * pdf(dist, x), -Inf, q)
+        ETL = -(mu + sigma * (E_X_cond / alpha))
     end
+    return VaR, ETL
 end
 
-"""
-    expectedtailloss(R::LogReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
-
-Calculates the Expected Tail Loss for a return series and a probility level `p`
-
-# Methods:
-   * gaussian (Default)
-   * historical
-   * cornish_fisher  
-"""
-function expectedtailloss(R::LogReturn,p::Number,method::AbstractString="gaussian", shape::Int64=6)
-    if isequal(method,"gaussian")
-        return mean_arith(R) + stdvp(R)* (pdf(Normal(0,1),qnorm(p))/(1-p))
-    elseif isequal(method,"student")
-        return  stdvp(R)* (pdf(TDist(shape),qtdist(p, shape))/(1-p))
-    elseif isequal(method,"simulation")
-        R_s = sort(R.values)
-        bound =floor(Int64,size(R_s)[1]*p)
-        return  mean_arith(R_s[1:bound])    
-    elseif isequal(method,"cornish_fisher")
-        q = quantile(Normal(), p)
-        S = skew(R,"simple")
-        K = kurt(R,"excess")
-        cf = q + 1/6*(q^2-1)S + 1/24*(q^3-3q)*K - 1/36*(2q^3-5q)*S^2
-        npdf = pdf(Normal(),cf)
-        cf1 = -1/p*npdf * (1 + 1/6*(cf^3)*S + 1/72*(cf^6 - 9cf^4 + 9cf^2 + 3)*S^2 + 1/24*(cf^4 - 2cf^2 - 1)*K)
-        return (stdvp(R)*cf1)
-    else
-        throw(ArgumentError("$method does not exist please choose one from: gaussian, student, simulation, cornish_fisher"))
+function VaR_ETL(returns::Vector{<:Real}, alpha::Real, dist::Distribution, mu::Real=0)
+    sigma = std(returns)
+    q = quantile(dist, alpha)
+    VaR = -(mu + sigma * q)
+    if dist isa Normal
+        ETL = -mu + sigma * pdf(dist, q) / alpha  
+    elseif dist isa TDist
+        v = params(dist)[1]
+        t_pdf = pdf(dist, q) 
+        ETL = -mu + sigma * (t_pdf / alpha) * (v + q^2) / (v - 1)
+    else # Numerical integration fallback
+        E_X_cond, _ = quadgk(x -> x * pdf(dist, x), -Inf, q)
+        ETL = -(mu + sigma * (E_X_cond / alpha))
     end
+    return VaR, ETL
 end
+
+
+# Function to compute VaR and ETL using Historical Simulation
+function VaR_ETL(returns::Vector{<:Real}, alpha::Real)
+    n = length(returns)
+    if alpha * n < 1
+        @warn "Insufficient data: alpha * n < 1. Either increase sample size or use a larger alpha."
+        return NaN, NaN
+    end
+    sorted_returns = sort(returns)
+    index = Int(floor(alpha * n))
+    VaR = -sorted_returns[index]
+    ETL = -mean(sorted_returns[1:index])
+    return VaR, ETL
+end
+
+# Function to compute VaR using Historical Simulation
+function VaR(returns::Vector{<:Real}, alpha::Real)
+    n = length(returns)
+    if alpha * n < 1
+        @warn "Insufficient data: alpha * n < 1. Either increase sample size or use a larger alpha."
+        return NaN, NaN
+    end
+    sorted_returns = sort(returns)
+    index = Int(floor(alpha * n))
+    VaR = -sorted_returns[index]
+    return VaR
+end
+
+# Function to compute ETL using Historical Simulation
+function ETL(returns::Vector{<:Real}, alpha::Real)
+    n = length(returns)
+    if alpha * n < 1
+        @warn "Insufficient data: alpha * n < 1. Either increase sample size or use a larger alpha."
+        return NaN, NaN
+    end
+    sorted_returns = sort(returns)
+    index = Int(floor(alpha * n))
+    ETL = -mean(sorted_returns[1:index])
+    return ETL
+end
+
 
 """
     hurstindex(R::AbstractArray{<:Number})
@@ -1165,44 +1084,6 @@ function covariance(Ra::SimpleReturn,Rb::SimpleReturn;corrected::Bool=false)
     end
 end
 
-#=
-"""
-    coskew(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number})
-
-Calculates the CoSkewness of returns.  
-Note that `coskew(x,y) != coskew(y,x)`.
-
-```math
-Coskew(r_a,r_b) = \\frac{cov(r_a,(r_b-\\overline{r_b})^2)}{\\sum_{i=1}^n(r_b - \\overline{r_b})^3\\times\\frac{1}{n}}
-```
-"""
-coskew(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number}) = covariance(Ra,(Rb .- mean_arith(Rb)).^2)/μn(Rb,3)
-"""
-    coskew(Ra::AssetReturn,Rb::AssetReturn)
-
-Calculates the CoSkewness of returns.  
-"""
-coskew(Ra::AssetReturn,Rb::AssetReturn) = covariance(Ra.values,(Rb.values .- mean_arith(Rb)).^2)/μn(Rb,3)
-
-"""
-    cokurt(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number})
-
-Calculates the symmetric CoKurtosis of two returns (i.e. Cokurt(Ra,Ra,Rb,Rb))
-
-```math
-CoKurtosis(r_a,r_b) = \\frac{\\frac{1}{n}\\times\\sum_{t=1}^n[(r_a - \\overline{r_a})^2\\times(r_b - \\overline{r_b})^2]}{\\sigma^2_{r_a}\\times\\sigma^2_{r_b}}
-```
-
-"""
-cokurt(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number}) = ( mean_arith( ((Ra .- mean_arith(Ra)).^2).*((Rb .- mean_arith(Rb)).^2))) / ((stdvp(Ra)^2)*(stdvp(Ra)^2))
-"""
-    cokurt(Ra::AssetReturn,Rb::AssetReturn)
-
-Calculates the symmetric CoKurtosis of two returns (i.e. Cokurt(Ra,Ra,Rb,Rb))
-"""
-cokurt(Ra::AssetReturn,Rb::AssetReturn) = ( mean_arith( ((Ra.values .- mean_arith(Ra)).^2).*((Rb.values .- mean_arith(Rb)).^2))) / ((stdvp(Ra)^2)*(stdvp(Ra)^2))
-
-=#
 
 """
     specificrisk(Ra::AbstractArray{<:Number},Rb::AbstractArray{<:Number},Rf::Number=0)
