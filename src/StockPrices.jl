@@ -146,7 +146,7 @@ function get_prices(symbol::String, startdt::Int, enddt::Int;
             if throw_error
                 error(error_msg)
             else
-                @warn error_msg
+                @info error_msg
                 return OrderedDict{String, Union{String,Vector{DateTime},Vector{Float64}}}()
             end
         end
@@ -358,6 +358,10 @@ function get_prices(symbols::Vector{String}, startdt, enddt; interval= "1d")
         next!(progress)
     end
     df = vcat([DataFrame(i) for i in data_list]...)
+    if isempty(df)
+        @info "Returning an empty DataFrame."
+        return DataFrame()
+    end
     if "adjclose" in names(df)
         rename!(df, :timestamp => :date)
         df.date = Date.(df.date)
@@ -380,6 +384,13 @@ Examples:
 function long_wide(df, rows, column, elements)
     df_wide = unstack(df, rows, column, elements)
     sort!(df_wide, rows)
+
+    for col in names(df_wide)
+        if eltype(df_wide[!, col]) <: Union{Missing, Float64}
+            df_wide[!, col] .= coalesce.(df_wide[!, col], NaN)  # Replace missing with NaN
+            df_wide[!, col] = convert(Vector{Float64}, df_wide[!, col])  # Convert to Float64
+        end
+    end
     return df_wide
 end
 
@@ -401,10 +412,11 @@ function log_return(df)
                      :close => (x -> log.(x ./ ShiftedArrays.lag(x, 1))) => :log_return)
         df = unique(df, [:ticker, :timestamp])
     else
-        @warn "No column names adjclose or close in the dataframe."
+        @info "No column names :adjclose or :close in the dataframe."
+        @info "Returning an empty DataFrame."
         return  DataFrame()
     end
-    df = filter(row -> !ismissing(row.log_return), df)
+    df = dropmissing(df)
 end
 
 """
@@ -425,10 +437,11 @@ function simple_return(df)
                      :close => (x -> (x ./ ShiftedArrays.lag(x, 1) .-1)) => :simple_return)
         df = unique(df, [:ticker, :timestamp])
     else
-        @warn "No column names adjclose or close in the dataframe."
+        @info "No column names :adjclose or :close in the dataframe."
+        @info "Returning an empty DataFrame."
         return  DataFrame()
     end
-    df = filter(row -> !ismissing(row.simple_return), df)
+    df = dropmissing(df)
 end
 
 """
@@ -451,8 +464,9 @@ function get_returns(symbols::Vector{String}, startdt, enddt; interval="1d", ret
             return long_wide(returns, :timestamp, :ticker, :simple_return)
         end
     else
-        @warn "Return type must be either: :log or :simple"
-        return nothing
+        @info "Return type must be either: log or simple."
+        @info "Returning an empty DataFrame."
+        return DataFrame()
     end
 end
 
