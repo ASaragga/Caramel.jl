@@ -79,7 +79,10 @@ Utilizamos a função ```get_prices``` para extrair a partir do website Yahoo Fi
   19 │ IBM     2025-02-28  250.86   252.81   246.54    252.44   252.44   7.9888e6
                                                                     11 rows omitted
 ```
-A coluna :adjclose apresenta o histórico das cotações de fecho das sessões diárias da New York Stock Exchange, ajustadas por emissão de novas ações, pagamento de dividendos, stock splits e reverse splits ocorridos ao longo do tempo. Podemos também definir um vector de n símbolos para os quais pretendemos obter cotações
+A coluna :adjclose apresenta o histórico das cotações de fecho das sessões diárias da New York Stock Exchange, ajustadas por emissão de novas ações, pagamento de dividendos, stock splits e reverse splits ocorridos ao longo do tempo. 
+
+# 2 - Obter Cotações
+Podemos também definir um vector de n símbolos para os quais pretendemos obter cotações
 ```
 p = get_prices(["IBM", "AAPL"],Date(2025,02,01), Date(2025,03,03))
 ```
@@ -100,7 +103,7 @@ p = get_prices(["IBM", "AAPL"],Date(2025,02,01), Date(2025,03,03))
                                                                     30 rows omitted
 ```
 
-
+# 3 - Obter Retornos
  
 Para obtermos retornos logarítmicos $log(P_t/P_{t-1})$ ou simples $(P_t-P_{t-1})/P_{t-1}$, podemos fazer
 ```
@@ -130,7 +133,7 @@ r = get_returns(["IBM"],Date(2025,02,01), Date(2025,03,03), return_type = "simpl
   18 │ 2025-02-28  -0.00311967
                 10 rows omitted
 ```
-Também com os retornos definir um vector de n símbolos, como no exemplo seguinte que agora calcula os log-retornos para as ações da IBM e Apple
+Também com os retornos podemos definir um vector de n símbolos, como no exemplo seguinte, queonde agora calculamos os log-retornos para as ações da IBM e Apple
 ```
 r = get_returns(["IBM", "AAPL"],Date(2025,02,01), Date(2025,03,03))
 ```
@@ -179,10 +182,7 @@ rIBM = r[1:3,:IBM]
  -0.004396023934239164
  -0.03816687340275505
 ```
-
-
-
-
+# 4 - Calcular Volatilidades
 Finalmente, computamos a volatilidade diária das cotações da IBM neste período, usando a biblioteca ```Statistics```
 ```
 using Statistics
