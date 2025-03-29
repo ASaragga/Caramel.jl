@@ -113,7 +113,7 @@ ou
 ```
 r = get_returns(["IBM"],Date(2025,02,01), Date(2025,03,03))
 ```  
-sendo assumido por omissão que ```return_type = "log"```.  Em Julia, os logarítmos base (e) são denotados por log e os logarítmos base (10) por log10. Para retornos simples teremos,
+sendo assumido por omissão que ```return_type = "log"```.  Em Julia, os logarítmos naturais são denotados por log e os logarítmos base (10) por log10. Para retornos simples teremos,
 ```
 r = get_returns(["IBM"],Date(2025,02,01), Date(2025,03,03), return_type = "simple")
 ``` 
