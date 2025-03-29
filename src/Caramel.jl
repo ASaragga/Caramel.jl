@@ -1,5 +1,7 @@
 module Caramel
     # Dependencies:
+    using DataFrames
+    using ProgressMeter
     using LinearAlgebra
     using Random
     using Dates 
@@ -11,6 +13,7 @@ module Caramel
     using OrderedCollections
     using Optim
     using QuadGK
+    using ShiftedArrays
 
     # using Plots
 
@@ -30,8 +33,8 @@ module Caramel
     export mad, quantile, quantilerank, describe
 
     # Probability distributions
-    import Distributions: Normal, TDist, pdf, cdf, logpdf, Distribution
-    export Normal, TDist, pdf, cdf, logpdf, Distribution
+    import Distributions: Normal, TDist, pdf, cdf, logpdf, Distribution, LocationScale
+    export Normal, TDist, pdf, cdf, logpdf, Distribution, LocationScale
 
     # CSV
     import CSV: read, write
@@ -45,7 +48,7 @@ module Caramel
     export sql, db_connect, db_close
 
     # DataFrames: Consider not exporting it
-    import DataFrames: DataFrame    
+    import DataFrames: DataFrame, unstack, rename!   
     export DataFrame  # Optional—consider removing
  
  
@@ -71,13 +74,11 @@ module Caramel
     export to_monthly_return, to_annual_return
 
     #From PortfolioStats.jl
-    export drawdown,drawdownpeak,maxdrawdown,avgdrawdown,drawdown_table,annualize
-    export activepremium,sharperatio,adjustedsharpe,bernardoledoitratio
-    export burkeratio,calmarratio,downsidedeviation,downsidepotential,semideviation
-    export semivariance, hurstindex,kappa,painindex,covariance
-    export coskew,cokurt,specificrisk,systematicrisk,totalrisk,trackingerror,jensensalpha
-    export informationratio,treynorratio,appraisalratio
     export VaR, ETL, VaR_ETL
+    export sharperatio, calmerratio, trackingerror, hurstindex
+    export drawdowns, drawdown_metrics, drawdown_durations, max_drawdown
+
+
 
     #From FamaFrench.jl
     export get_ff_factors
@@ -99,10 +100,13 @@ module Caramel
     export get_quoteSummary, get_calendar_events, get_earnings_estimates, get_insider_holders, get_insider_transactions, get_major_holders_breakdown, get_recommendation_trend, get_summary_detail, get_upgrade_downgrade_history, get_quote_type, get_entity_profile, get_key_statistics, get_target_prices, get_institutional_ownership, get_fund_ownership, get_eps_estimates, get_sec_filings, get_esg_scores, db_create_insert
 
     #From StockPrices.jl
-    export get_prices, get_dividends, get_splits
+    export get_prices, get_returns, long_wide, simple_return, log_return, get_dividends, get_splits
 
     #From CommodityPrices.jl
     export get_commodity_prices
+
+    #From Plots.jl
+    export qqplot, acf
 
     include("Utilities.jl");
     include("Structs.jl");

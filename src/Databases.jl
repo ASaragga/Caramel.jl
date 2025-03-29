@@ -164,6 +164,34 @@ function db_create(db_path::String, dbtype::String = "duckdb")
         """)
 
         DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS insider_holders (
+            symbol                  VARCHAR NOT NULL,
+            name                    VARCHAR,
+            relation                VARCHAR,
+            description             VARCHAR,
+            lastestTransDate        DATE,    
+            positionDirect          BIGINT,
+            positionDirectDate      DATE,
+            positionIndirect        BIGINT,
+            positionIndirectDate    DATE
+            );
+        """)
+
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS insider_transactions (
+            symbol              VARCHAR NOT NULL,
+            filerName           VARCHAR,
+            filerRelation       VARCHAR,
+            transactionText     VARCHAR,
+            date                DATE,    
+            ownership           VARCHAR,
+            shares              BIGINT,
+            value               BIGINT
+            );
+        """)
+
+
+        DBInterface.execute(conn, """
         CREATE TABLE IF NOT EXISTS eps_estimates (
             symbol          VARCHAR NOT NULL,
             quarter         VARCHAR,
@@ -378,6 +406,34 @@ function db_create(db_path::String, dbtype::String = "duckdb")
             position        INTEGER,
             value           INTEGER,
             pctChange       REAL
+            );
+        """)
+
+
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS insider_holders (
+            symbol                  TEXT NOT NULL,
+            name                    TEXT,
+            relation                TEXT,
+            description             TEXT,
+            lastestTransDate        TEXT,    
+            positionDirect          INTEGER,
+            positionDirectDate      TEXT,
+            positionIndirect        INTEGER,
+            positionIndirectDate    TEXT
+            );
+        """)
+
+        DBInterface.execute(conn, """
+        CREATE TABLE IF NOT EXISTS insider_transactions (
+            symbol              TEXT NOT NULL,
+            filerName           TEXT,
+            filerRelation       TEXT,
+            transactionText     TEXT,
+            date                TEXT,    
+            ownership           TEXT,
+            shares              INTEGER,
+            value               INTEGER,
             );
         """)
 

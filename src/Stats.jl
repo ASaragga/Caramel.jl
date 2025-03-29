@@ -99,93 +99,6 @@ function stdvs(x::Asset)
 end
 #
 
-#=
-# Skewness:
-"""
-    skew(R, method="simple")
-
-Calculates the skewness of a series.
-
-# Methods: 
-   * Population
-   * Sample
-   * Fisher
-"""
-function skew(R, method="simple")
-    n = length(R)
-    if isequal(method,"sample")
-        return ( n/((n-1)*(n-2)) )* sum( ((R.-mean_arith(R))/stdvs(R)).^3 )
-    elseif isequal(method,"fisher")
-        return (sqrt(n*(n-1))/(n-2))*( sum( ((R.-mean_arith(R)).^3)./n ))/( sum( ((R.-mean_arith(R)).^2)./n)^(3/2))
-    elseif isequal(method,"simple")
-        return (1/n) * sum( ((R.-mean_arith(R))/stdvp(R)).^3 )
-    else
-        throw(ArgumentError("$method does not exist please choose one from: simple, sample, fisher"))
-    end
-end
-function skew(R::Asset, method="simple")
-    n = length(R.values)
-    if isequal(method,"sample")
-        return ( n/((n-1)*(n-2)) )* sum( ((R.values .- mean_arith(R))/stdvs(R)).^3 )
-    elseif isequal(method,"fisher")
-        return (sqrt(n*(n-1))/(n-2))*( sum( ((R.values .-mean_arith(R)).^3)./n ))/( sum( ((R.values .- mean_arith(R)).^2)./n)^(3/2))
-    elseif isequal(method,"simple")
-        return (1/n) * sum( ((R.values .-mean_arith(R))/stdvp(R)).^3 )
-    else
-        throw(ArgumentError("$method does not exist please choose one from: simple, sample, fisher"))
-    end
-end
-#
-
-# Kurtosis:
-"""
-    kurt(R, method="simple")
-
-Calculates the kurtosis of a series.
-
-# Methods: 
-   * population
-   * excess (population - 3)
-   * sample
-   * sampleexcess (sample - 3)
-   * fisher
-"""
-function kurt(R, method="simple")
-    n = length(R)
-    if isequal(method,"excess")
-        return (1/n * sum( ((R .- mean_arith(R))./stdvp(R)).^4 )) - 3
-    elseif isequal(method,"sample")
-        return (n*(n+1))/((n-1)*(n-2)*(n-3)) * (sum( ((R .- mean_arith(R))./stdvs(R)).^4 ))
-    elseif isequal(method,"sampleexcess")
-        return (n*(n+1))/((n-1)*(n-2)*(n-3)) * (sum( ((R .- mean_arith(R))./stdvs(R)).^4 )) - ((3*((n-1)^2))/((n-2)*(n-3)))
-    elseif isequal(method,"fisher")
-        return ( ((n+1)*(n-1))/((n-2)*(n-3)) ) *(  (sum(((R.-mean_arith(R)).^4)./n)/(sum(((R.-mean_arith(R)).^2)./n)^2)) - ((3*(n-1))/(n+1))) 
-    elseif isequal(method,"simple")
-        return (1/n * sum( ((R .- mean_arith(R))./stdvp(R)).^4 ))
-    else
-        throw(ArgumentError("$method does not exist please choose one from: simple, excess, sample, sampleexcess, fisher"))
-    end
-end
-function kurt(R::Asset, method="simple")
-    n = length(R.values)
-    if isequal(method,"excess")
-        return (1/n * sum( ((R.values .- mean_arith(R))./stdvp(R)).^4 )) - 3
-    elseif isequal(method,"sample")
-        return (n*(n+1))/((n-1)*(n-2)*(n-3)) * (sum( ((R.values .- mean_arith(R))./stdvs(R)).^4 ))
-    elseif isequal(method,"sampleexcess")
-        return (n*(n+1))/((n-1)*(n-2)*(n-3)) * (sum( ((R.values .- mean_arith(R))./stdvs(R)).^4 )) - ((3*((n-1)^2))/((n-2)*(n-3)))
-    elseif isequal(method,"fisher")
-        return ( ((n+1)*(n-1))/((n-2)*(n-3)) ) *(  (sum(((R.values .-mean_arith(R)).^4)./n)/(sum(((R.values .-mean_arith(R)).^2)./n)^2)) - ((3*(n-1))/(n+1))) 
-    elseif isequal(method,"simple")
-        return (1/n * sum( ((R.values .- mean_arith(R))./stdvp(R)).^4 ))
-    else
-        throw(ArgumentError("$method does not exist please choose one from: simple, excess, sample, sampleexcess, fisher"))
-    end
-end
-#
-# End Stats
-=#
-
 
 ################################
 
@@ -286,7 +199,7 @@ end
 
 
 function fit_mle(::Type{TDist}, data)
-    # Define the log-likelihood function for the Student's t-distribution
+    # Define the log-likelihood function for the Student's t distribution parametrised by ν (degrees of freedom), μ (mean), and s (scale)
     function log_likelihood(params, data)
         ν, μ, s = params
         if ν <= 0 || s <= 0  # Ensure valid parameters

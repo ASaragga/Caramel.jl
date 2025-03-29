@@ -348,6 +348,115 @@ end
 get_prices(symbol::String, startdt::T, enddt::T; kwargs...) where T <: Union{Date,DateTime,AbstractString} = get_prices(symbol; startdt=startdt, enddt=enddt, kwargs...)
 
 
+function get_prices(symbols::Vector{String}, startdt, enddt; interval= "1d")
+    data_list = Vector{OrderedDict{String, Union{Vector{Float64}, Vector{DateTime}, String}}}()
+
+    # Progress bar
+    progress = Progress(length(symbols), desc="Obtendo cotações...")
+    for ticker in symbols
+        push!(data_list, get_prices(ticker, startdt, enddt, interval=interval))
+        next!(progress)
+    end
+    df = vcat([DataFrame(i) for i in data_list]...)
+    if "adjclose" in names(df)
+        rename!(df, :timestamp => :date)
+        df.date = Date.(df.date)
+    else
+        df = filter(row -> row.timestamp <= enddt, df)
+        df = unique(df, [:ticker, :timestamp])
+    end
+    return df
+end
+
+"""
+    long_wide(df::DataFrame, rows, columns, elements)
+
+Change DataFrame format from long to wide
+
+Examples:
+    long_wide(df, :date, :ticker, :adjclose)
+    long_wide(df, :timestamp, :ticker, :close)
+"""
+function long_wide(df, rows, column, elements)
+    df_wide = unstack(df, rows, column, elements)
+    sort!(df_wide, rows)
+    return df_wide
+end
+
+"""
+    log_return(df::DataFrame)
+
+Computes the log return = log(Pt/Pt-1). Assumes there is a :adjclose or :close column.
+"""
+function log_return(df)
+    if "adjclose" in names(df)
+        sort!(df, [:ticker, :date])
+        df = combine(groupby(df, :ticker), 
+                     :date,  
+                     :adjclose => (x -> log.(x ./ ShiftedArrays.lag(x, 1))) => :log_return)
+    elseif "close" in names(df)
+        sort!(df, [:ticker, :timestamp])
+        df = combine(groupby(df, :ticker), 
+                     :timestamp, 
+                     :close => (x -> log.(x ./ ShiftedArrays.lag(x, 1))) => :log_return)
+        df = unique(df, [:ticker, :timestamp])
+    else
+        @warn "No column names adjclose or close in the dataframe."
+        return  DataFrame()
+    end
+    df = filter(row -> !ismissing(row.log_return), df)
+end
+
+"""
+    simple_return(df::DataFrame)
+
+Computes the simple return = Pt/Pt_1 - 1. Assumes there is a :adjclose or :close column
+"""
+function simple_return(df)
+    if "adjclose" in names(df)
+        sort!(df, [:ticker, :date])
+        df = combine(groupby(df, :ticker), 
+                     :date,  
+                     :adjclose => (x -> (x ./ ShiftedArrays.lag(x, 1) .-1)) => :simple_return)
+    elseif "close" in names(df)
+        sort!(df, [:ticker, :timestamp])
+        df = combine(groupby(df, :ticker), 
+                     :timestamp, 
+                     :close => (x -> (x ./ ShiftedArrays.lag(x, 1) .-1)) => :simple_return)
+        df = unique(df, [:ticker, :timestamp])
+    else
+        @warn "No column names adjclose or close in the dataframe."
+        return  DataFrame()
+    end
+    df = filter(row -> !ismissing(row.simple_return), df)
+end
+
+"""
+    get_returns(symbols::Vector{String}, startdt, enddt, interval="1d"; return_type = :log)
+"""
+function get_returns(symbols::Vector{String}, startdt, enddt; interval="1d", return_type = "log")
+    df = get_prices(symbols, startdt, enddt, interval = interval)
+    if return_type == "log"
+        returns = log_return(df)
+        if "date" in names(df)
+            return long_wide(returns, :date, :ticker, :log_return)
+        else
+            return long_wide(returns, :timestamp, :ticker, :log_return)
+        end
+    elseif return_type == "simple"
+        returns = simple_return(df) 
+        if "date" in names(df)
+            return long_wide(returns, :date, :ticker, :simple_return)
+        else
+            return long_wide(returns, :timestamp, :ticker, :simple_return)
+        end
+    else
+        @warn "Return type must be either: :log or :simple"
+        return nothing
+    end
+end
+
+
 """
     get_splits(symbol::String; startdt::Union{Date,DateTime,AbstractString}="", enddt::Union{Date,DateTime,AbstractString}="", timeout::Int=10, throw_error::Bool=false, exchange_local_time::Bool=false)
 

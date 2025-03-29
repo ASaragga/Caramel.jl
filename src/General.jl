@@ -565,7 +565,7 @@ get_insider_holders(symbol::AbstractString) =  get_quoteSummary(symbol) |> get_i
 """
     get_insider_transactions(quoteSummary::JSON3.Object)
 
-Retrievs the insider transactions from the quote summary.
+Retrieves the insider transactions from the quote summary.
 
 ## Arguments
 
