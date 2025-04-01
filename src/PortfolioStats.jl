@@ -3,7 +3,7 @@
 
 ################################
 # Drawdowns:
-function drawdowns(prices::Vector{Union{Missing, Float64}})
+function drawdowns(prices)
     n = length(prices)
     drawdowns = zeros(n)
     peak = prices[1]  # Start with the first price as peak
@@ -14,7 +14,7 @@ function drawdowns(prices::Vector{Union{Missing, Float64}})
     return abs.(drawdowns)  # Return positive drawdowns
 end
 
-function drawdown_metrics(prices::Vector{Union{Missing, Float64}})
+function drawdown_metrics(prices)
     n = length(prices)
     peak = prices[1]  # Start with first price as peak
     drawdowns = zeros(n)
@@ -37,7 +37,7 @@ function drawdown_metrics(prices::Vector{Union{Missing, Float64}})
     return abs.(drawdowns), abs(max_drawdown), abs(mean(drawdowns)), drawdown_durations
 end
 
-function drawdown_table(x::Vector{Union{Missing, Float64}}, dates::Vector{<:TimeType})
+function drawdown_table(x, dates)
     length(x) == length(dates) || error("Prices and dates must have the same length.")
 
     peak = x[1]
@@ -86,7 +86,7 @@ end
 """
     max_drawdown(returns::Vector{Float64})
 """
-function max_drawdown(returns::Vector{Union{Missing, Float64}})
+function max_drawdown(returns)
     cumulative_returns = cumsum(returns)  # Compute cumulative log returns
     peak = accumulate(max, cumulative_returns)  # Running max
     drawdown = cumulative_returns .- peak  # Drawdown in log terms
@@ -96,7 +96,7 @@ end
 """
     calmarratio(log_returns::Vector{Float64}; trading_days=252)
 """
-function calmarratio(log_returns::Vector{Union{Missing, Float64}}; trading_days=252)
+function calmarratio(log_returns; trading_days=252)
     n = length(log_returns)  # Number of periods
     ann_ret = sum(log_returns) * (trading_days / n)  # Annualized log return
     mdd = max_drawdown(log_returns)  # Maximum drawdown
@@ -111,16 +111,16 @@ Calculates the Sharpe Ratio from a given return, standard deviation, and risk fr
 SR=\\frac{r_a - r_f}{\\sigma_a}
 ```
 """
-sharperatio(R::Number,σ::Number,Rf::Number) = (R-Rf)/σ
+sharperatio(R,σ,Rf) = (R-Rf)/σ
 
 """
     sharperatio(R::AbstractArray{<:Number},Rf::Number=0.;scale)
 
 Calculates the Sharpe Ratio from a given return series and a risk free rate.
 """
-function sharperatio(R::Vector{Union{Missing, Float64}},Rf::Number)
-    σ = std(R)
-    μ = mean(R)
+function sharperatio(returns,Rf)
+    σ = std(returns)
+    μ = mean(returns)
     return sharperatio(μ,σ,Rf)
 end
 
@@ -132,7 +132,7 @@ function VaR(sigma::Real, alpha::Real, dist::Distribution, mu::Real=0)
     return VaR
 end
 
-function VaR(returns::Vector{Union{Missing, Float64}}, alpha::Real, dist::Distribution, mu::Real=0)
+function VaR(returns, alpha::Real, dist::Distribution, mu::Real=0)
     sigma = std(returns)
     q = quantile(dist, alpha)
     VaR = -(mu + sigma * q)
@@ -154,7 +154,7 @@ function ETL(sigma::Real, alpha::Real, dist::Distribution, mu::Real=0)
     return ETL
 end
 
-function ETL(returns::Vector{Union{Missing, Float64}}, alpha::Real, dist::Distribution, mu::Real=0)
+function ETL(returns, alpha::Real, dist::Distribution, mu::Real=0)
     sigma = std(returns)
     q = quantile(dist, alpha)
     if dist isa Normal
@@ -187,7 +187,7 @@ function VaR_ETL(sigma::Real, alpha::Real, dist::Distribution, mu::Real=0)
     return VaR, ETL
 end
 
-function VaR_ETL(returns::Vector{Union{Missing, Float64}}, alpha::Real, dist::Distribution, mu::Real=0)
+function VaR_ETL(returns, alpha::Real, dist::Distribution, mu::Real=0)
     sigma = std(returns)
     q = quantile(dist, alpha)
     VaR = -(mu + sigma * q)
@@ -206,7 +206,7 @@ end
 
 
 # Function to compute VaR and ETL using Historical Simulation
-function VaR_ETL(returns::Vector{Union{Missing, Float64}}, alpha::Real)
+function VaR_ETL(returns, alpha::Real)
     n = length(returns)
     if alpha * n < 1
         @warn "Insufficient data: alpha * n < 1. Either increase sample size or use a larger alpha."
@@ -220,7 +220,7 @@ function VaR_ETL(returns::Vector{Union{Missing, Float64}}, alpha::Real)
 end
 
 # Function to compute VaR using Historical Simulation
-function VaR(returns::Vector{Union{Missing, Float64}}, alpha::Real)
+function VaR(returns, alpha::Real)
     n = length(returns)
     if alpha * n < 1
         @warn "Insufficient data: alpha * n < 1. Either increase sample size or use a larger alpha."
@@ -233,7 +233,7 @@ function VaR(returns::Vector{Union{Missing, Float64}}, alpha::Real)
 end
 
 # Function to compute ETL using Historical Simulation
-function ETL(returns::Vector{Union{Missing, Float64}}, alpha::Real)
+function ETL(returns, alpha::Real)
     n = length(returns)
     if alpha * n < 1
         @warn "Insufficient data: alpha * n < 1. Either increase sample size or use a larger alpha."
@@ -257,7 +257,7 @@ Measures whether returns are random, peristent, or mean reverting.
 HurstIndex = \\frac{log(\\frac{[max(r) - min(r)]}{\\sigma})}{log(n)}
 ```
 """
-function hurst_exponent(R::Vector{Union{Missing, Float64}}; min_window::Int=10, max_window::Int=100, window_step::Int=5)
+function hurstindex(R; min_window::Int=10, max_window::Int=100, window_step::Int=5)
     n = length(R)
     log_rs = Float64[]
     log_window = Float64[]
@@ -294,5 +294,5 @@ Measures how well a return tracks its benchmark.
 TrackingError(r_a,r_b) = \\sqrt{\\sum_{t=1}^n\\frac{(r_{a,t} -r_{b,t})^2}{n}}
 ```
 """
-trackingerror(Ra::Vector{Union{Missing, Float64}},Rb::Vector{Union{Missing, Float64}}) = sqrt( sum( ((Ra.-Rb).^2)./(length(Ra)) ) )
+trackingerror(Ra,Rb) = sqrt( sum( ((Ra.-Rb).^2)./(length(Ra)) ) )
 
